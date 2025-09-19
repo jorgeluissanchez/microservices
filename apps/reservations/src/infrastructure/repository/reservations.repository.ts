@@ -2,7 +2,7 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Injectable, Logger } from '@nestjs/common';
 import { AbstractRepository } from '@app/common';
-import { ReservationDocument } from './entities/reservation.entity';
+import { ReservationDocument } from '../../domain/entity/reservation.entity';
 
 @Injectable()
 export class ReservationsRepository extends AbstractRepository<ReservationDocument> {

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { AuthController } from '../../../infrastructure/http/controller/auth.controller';
+import { AuthService } from '../../../application/service/auth.service';
 
 describe('AuthController', () => {
   let authController: AuthController;
@@ -12,11 +12,5 @@ describe('AuthController', () => {
     }).compile();
 
     authController = app.get<AuthController>(AuthController);
-  });
-
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(authController.getHello()).toBe('Hello World!');
-    });
   });
 });

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ReservationsModule } from './reservations/reservations.module';
+import { ReservationsModule } from './infrastructure/http/module/reservations.module';
 import { ValidationPipe } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';

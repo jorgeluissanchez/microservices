@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ReservationsService } from './reservations.service';
-import { ReservationsController } from './reservations.controller';
+import { ReservationsService } from '../../../application/service/reservations.service';
+import { ReservationsController } from '../controller/reservations.controller';
 import { AUTH_SERVICE, DatabaseModule } from '@app/common';
-import { ReservationsRepository } from './reservations.repository';
+import { ReservationsRepository } from '../../../infrastructure/repository/reservations.repository';
 import {
   ReservationDocument,
   ReservationSchema,
-} from './entities/reservation.entity';
+} from '../../../domain/entity/reservation.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { ClientsModule, Transport } from '@nestjs/microservices';

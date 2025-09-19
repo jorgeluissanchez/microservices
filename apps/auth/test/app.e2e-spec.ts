@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AuthModule } from './../src/auth.module';
+import { AuthModule } from '../src/infrastructure/interface/module/auth.module';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { UsersModule } from './users/users.module';
+import { AuthController } from '../../../infrastructure/http/controller/auth.controller';
+import { AuthService } from '../../../application/service/auth.service';
+import { UsersModule } from '../../../infrastructure/http/module/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
-import { LocalStrategy } from './strategies/local.strategy';
-import { JwtStrategy } from './strategies/jwt.strategy';
+import { LocalStrategy } from '../../../infrastructure/http/strategies/local.strategy';
+import { JwtStrategy } from '../../../infrastructure/http/strategies/jwt.strategy';
 import { LoggerModule } from 'nestjs-pino';
 
 @Module({
