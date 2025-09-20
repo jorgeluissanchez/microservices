@@ -1,9 +1,9 @@
-import { IsEmail, IsString, IsStrongPassword } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsString } from 'class-validator';
 
-export class CreateUserDTO {
+export class LoginDto {
   @ApiProperty({
-    description: 'Email del usuario',
+    description: 'Email del usuario para iniciar sesión',
     example: 'usuario@ejemplo.com',
     type: String,
   })
@@ -11,12 +11,10 @@ export class CreateUserDTO {
   email: string;
 
   @ApiProperty({
-    description: 'Contraseña del usuario (debe ser fuerte)',
+    description: 'Contraseña del usuario',
     example: 'MiContraseña123!',
     type: String,
-    minLength: 8,
   })
   @IsString()
-  @IsStrongPassword()
   password: string;
 }

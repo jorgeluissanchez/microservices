@@ -5,6 +5,7 @@ import { Logger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import { Transport } from '@nestjs/microservices';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AuthModule);
@@ -23,6 +24,20 @@ async function bootstrap() {
     }),
   );
   app.useLogger(app.get(Logger));
+  
+  // Configuración de Swagger
+  const config = new DocumentBuilder()
+    .setTitle('Auth Service API')
+    .setDescription('API de autenticación y gestión de usuarios')
+    .setVersion('1.0')
+    .addTag('auth', 'Endpoints de autenticación')
+    .addTag('users', 'Gestión de usuarios')
+    .addBearerAuth()
+    .addCookieAuth('Authentication')
+    .build();
+  
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   await app.startAllMicroservices();
   const httpPort = configService.get<string | number>('HTTP_PORT');

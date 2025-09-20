@@ -4,12 +4,6 @@
     "declaration": false,
     "outDir": "../../dist/apps/auth",
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@/domain/*": ["src/domain/*"],
-      "@/application/*": ["src/application/*"],
-      "@/infrastructure/*": ["src/infrastructure/*"]
-    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
