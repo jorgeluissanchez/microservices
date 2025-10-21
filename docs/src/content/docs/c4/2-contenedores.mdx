@@ -1,0 +1,18 @@
+---
+title: Nivel 2 - Contenedores
+description: Diagrama de contenedores del sistema según el modelo C4.
+---
+
+Aquí se muestran los servicios principales que conforman el sistema.
+
+## Diagrama de Contenedores
+
+![Diagrama de Contenedores](/diagrams/Flujo_pago.png)
+
+## Claves de los contenedores
+
+* **Aplicación Web (SPA):** Es el _frontend_ que interactúa directamente con los usuarios y consume las APIs de los microservicios.
+* **Microservicio _auth_:** Es el punto de entrada para la **autenticación** y **autorización**. Es el único responsable de generar y validar los tokens JWT.
+* **Microservicio _payment_:** Gestiona toda la **lógica de negocio de la suscripción** y las **transacciones** de cobro.
+* **Bases de datos independientes:** Tanto _auth_ como _payment_ tienen su propio almacén de datos (_auth_db_ y _payment_db_), lo cual es fundamental para el **aislamiento** y la **autonomía** de los microservicios.
+* **Comunicación con la Entidad Bancaria Externa (Sistema de Pago Externo):** La comunicación con el mundo bancario está **encapsulada** únicamente dentro del _Microservicio payment_.

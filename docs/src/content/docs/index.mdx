@@ -1,0 +1,37 @@
+---
+title: Documentación C4
+description: Documentación de arquitectura usando el modelo C4.
+template: splash
+hero:
+  tagline: Arquitectura del sistema con enfoque C4
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Ver Contexto
+      link: /c4/1-contexto/
+      icon: right-arrow
+    - text: Ver Contenedores
+      link: /c4/2-contenedores/
+      icon: right-arrow
+    - text: Ver Componentes
+      link: /c4/3-componentes/
+      icon: right-arrow
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Acerca de esta documentación
+
+Este sitio describe la arquitectura del proyecto siguiendo el modelo **C4**, que organiza la información en cuatro niveles de detalle:
+
+<CardGrid stagger>
+	<Card title="Nivel 1: Contexto" icon="globe" href="/c4/1-contexto/">
+		Visión general del sistema dentro de su ecosistema y actores externos.
+	</Card>
+	<Card title="Nivel 2: Contenedores" icon="layers" href="/c4/2-contenedores/">
+		Servicios principales del sistema y su comunicación.
+	</Card>
+	<Card title="Nivel 3: Componentes" icon="boxes" href="/c4/3-componentes/">
+		Componentes internos de los servicios Auth y Payment.
+	</Card>
+</CardGrid>

@@ -1,0 +1,16 @@
+---
+title: Nivel 1 - Contexto
+description: Diagrama de contexto del sistema según el modelo C4.
+---
+
+El siguiente diagrama muestra el sistema dentro de su ecosistema, resaltando a los actores externos y la interacción con el sistema.
+
+![Diagrama de Contexto](/diagrams/context.png)
+
+## Claves del contexto
+
+* **Usuario como Actor Principal:** El _Usuario Suscriptor_ es la única **persona** que interactúa con el sistema, siendo el centro del negocio (pago de suscripción).
+* **Alcance del Sistema Principal:** La _Aplicación de Suscripción_ es vista como una **caja negra** única en este nivel, encapsulando los microservicios auth y payment.
+* **Dependencia Externa Crítica:** El sistema tiene una **dependencia fundamental** con el _Sistema de Pago Externo_ para poder cumplir con su propósito de negocio (procesar cobros).
+* **Interacción:** Todas las interacciones del usuario con el sistema principal se realizan a través de un **navegador web**.
+ 
