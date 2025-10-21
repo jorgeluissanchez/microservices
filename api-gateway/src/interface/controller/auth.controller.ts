@@ -1,5 +1,7 @@
-import { Controller, All, Req, Res, HttpService } from '@nestjs/common';
+import { Controller, All, Req, Res } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 import { Request, Response } from 'express';
+import { AxiosError } from 'axios';
 
 @Controller('auth')
 export class AuthController {
@@ -15,10 +17,10 @@ export class AuthController {
         data: req.body,
         headers: req.headers,
       });
-      res.status(status).json(data);
     } catch (error) {
-      const status = error.response?.status || 500;
-      res.status(status).json(error.response?.data || { message: 'Auth service error' });
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status || 500;
+      res.status(status).json(axiosError.response?.data || { message: 'Auth service error' });
+    }
     }
   }
-}

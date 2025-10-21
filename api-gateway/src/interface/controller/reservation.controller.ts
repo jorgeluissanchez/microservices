@@ -1,5 +1,7 @@
-import { Controller, All, Req, Res, HttpService } from '@nestjs/common';
+import { Controller, All, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { AxiosError } from 'axios';
+import { HttpService } from '@nestjs/axios';
 
 @Controller('reservation')
 export class ReservationController {
@@ -16,9 +18,10 @@ export class ReservationController {
         headers: req.headers,
       });
       res.status(status).json(data);
-    } catch (error) {
-      const status = error.response?.status || 500;
-      res.status(status).json(error.response?.data || { message: 'Reservation service error' });
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status || 500;
+      res.status(status).json(axiosError.response?.data || { message: 'Reservation service error' });
     }
   }
 }

@@ -1,5 +1,7 @@
-import { Controller, All, Req, Res, HttpService } from '@nestjs/common';
+import { Controller, All, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { AxiosError } from 'axios';
+import { HttpService } from '@nestjs/axios';
 
 @Controller('payment')
 export class PaymentController {
@@ -17,8 +19,9 @@ export class PaymentController {
       });
       res.status(status).json(data);
     } catch (error) {
-      const status = error.response?.status || 500;
-      res.status(status).json(error.response?.data || { message: 'Payment service error' });
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status || 500;
+      res.status(status).json(axiosError.response?.data || { message: 'Payment service error' });
     }
   }
 }
