@@ -6,12 +6,14 @@ import { Image } from 'astro:assets';
 import authImg from '../../../../public/diagrams/auth.png';
 
 En este nivel se detallan los componentes internos de cada servicio.
+### Diagrama general componentes servicios
+![Diagrama de Componentes](/diagrams/components.png)
 
 ## Microservicio Auth
 
 <Image src={authImg} alt="A bird." width="2000%" />
 
-## Claves de Auth
+### Claves de Auth
 
 * **Gestor de Seguridad:** Es el componente central para la **verificación de credenciales**, aplicando algoritmos de _hashing_ para proteger las contraseñas.
 * **Emisor/Validador de Tokens:** Es el componente que tiene la responsabilidad exclusiva de **firmar** los JWT durante el _login_ y de **validarlos** (firma y expiración) en las peticiones de otros servicios.
@@ -24,9 +26,56 @@ En este nivel se detallan los componentes internos de cada servicio.
 
 ![Diagrama de Componentes](/diagrams/payment.png)
 
-## Claves de Payment
+### Claves de Payment
 
 * **Separación de Responsabilidades:** La lógica de negocio (_Gestor de Lógica de Negocio_) está separada del acceso a datos (_Repositorio de Persistencia_) y de la comunicación externa.
 * **Controlador de Suscripciones:** Actúa como _guardián_, asegurando que la identidad del usuario se **valide primero** a través del _Cliente de Autenticación (auth)_ antes de proceder con cualquier acción.
 * **Cliente de Pasarela de Pago:** Es el único componente que conoce y utiliza el SDK/API para interactuar con el **Sistema de Pago Externo**.
 * **Persistencia Local:** Solo el _Repositorio de Persistencia_ escribe en la **Base de Datos _payment_db_**, garantizando la coherencia de los datos de suscripción.
+
+
+## Microservicio Reservation
+
+### Componentes internos:
+
+- **ReservationController:** gestiona `/reservation/create`, `/reservation/cancel`.
+
+- **ReservationService:** coordina la lógica de negocio.
+
+- **ReservationRepository:** acceso a PostgreSQL.
+
+- **KafkaConsumer:** escucha eventos de pago y actualiza reservas.
+
+### Flujo interno:
+
+1. Usuario solicita una reserva.
+
+2. Se valida el usuario (Auth).
+
+3. Se solicita pago (Payment).
+
+4. Si el pago es exitoso → se confirma la reserva.
+
+### Puntos clave:
+
+- Orquesta el flujo completo entre microservicios.
+
+- Depende de los resultados del sistema de pagos y autenticación.
+
+## API Gateway
+
+### Componentes internos
+
+- **Controllers:** manejan rutas `/auth`, `/payment`, `/reservation`.
+
+- **Proxy Layer:** reenvía solicitudes HTTP hacia cada microservicio.
+
+- **Validation & Error Handling:** valida datos entrantes y captura errores globales.
+
+### Puntos clave:
+
+- No contiene lógica de negocio.
+
+- Centraliza la autenticación y validación inicial.
+
+- Permite desacoplar el frontend de la estructura interna.

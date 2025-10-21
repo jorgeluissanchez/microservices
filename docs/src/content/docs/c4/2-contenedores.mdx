@@ -7,12 +7,74 @@ Aquí se muestran los servicios principales que conforman el sistema.
 
 ## Diagrama de Contenedores
 
-![Diagrama de Contenedores](/diagrams/Flujo_pago.png)
+![Diagrama de Contenedores](/diagrams/containers.png)
 
-## Claves de los contenedores
+## Descripción general
 
-* **Aplicación Web (SPA):** Es el _frontend_ que interactúa directamente con los usuarios y consume las APIs de los microservicios.
-* **Microservicio _auth_:** Es el punto de entrada para la **autenticación** y **autorización**. Es el único responsable de generar y validar los tokens JWT.
-* **Microservicio _payment_:** Gestiona toda la **lógica de negocio de la suscripción** y las **transacciones** de cobro.
-* **Bases de datos independientes:** Tanto _auth_ como _payment_ tienen su propio almacén de datos (_auth_db_ y _payment_db_), lo cual es fundamental para el **aislamiento** y la **autonomía** de los microservicios.
-* **Comunicación con la Entidad Bancaria Externa (Sistema de Pago Externo):** La comunicación con el mundo bancario está **encapsulada** únicamente dentro del _Microservicio payment_.
+Cada componente del sistema corre en su propio contenedor Docker, y el despliegue se orquesta con Docker Compose o Kubernetes.
+
+**Contenedores principales:**
+
+* API Gateway
+
+    - Framework: NestJS + Express
+
+    - Rol: enrutamiento HTTP, comunicación REST con microservicios.
+
+    - Expone: puerto 3000
+
+    - Comunicación interna: hacia auth:3001, payment:3002, reservation:3003.
+
+* Auth Service
+
+    - Framework: NestJS + MongoDB
+
+    - Función: autenticación JWT, registro y validación de usuarios.
+
+    - Base de datos: MongoDB (contenedor mongo)
+
+    - Comunicación: recibe solicitudes REST desde el Gateway y emite eventos Kafka.
+
+* Payment Service
+
+    - Framework: NestJS + PostgreSQL
+
+    - Función: gestión de pagos con Stripe.
+
+    - Base de datos: postgres-payment
+
+    - Comunicación: REST + Kafka.
+
+* Reservation Service
+
+    - Framework: NestJS + PostgreSQL
+
+    - Función: crea y gestiona reservas, interactuando con Auth y Payment.
+
+    - Comunicación: REST + Kafka.
+
+* Kafka + Zookeeper
+
+    - Infraestructura para mensajería asíncrona.
+
+    - Cada microservicio actúa como productor/consumidor de eventos.
+
+* Kafka UI
+
+    - Dashboard de monitoreo para tópicos y consumidores Kafka.
+
+* Bases de datos
+
+    - MongoDB: usuarios y credenciales.
+
+    - PostgreSQL (Payment y Reservation): operaciones financieras y reservas.
+
+## Puntos clave
+
+* La comunicación **sincrónica** (HTTP) pasa siempre por el API Gateway.
+
+* La comunicación **asíncrona** se maneja con Kafka.
+
+* Cada microservicio mantiene su propia base de datos (patrón Database per Service).
+
+* El despliegue completo se puede levantar con docker-compose up o los manifiestos de Kubernetes.

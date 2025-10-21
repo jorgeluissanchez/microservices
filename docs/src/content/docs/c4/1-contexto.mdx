@@ -7,10 +7,38 @@ El siguiente diagrama muestra el sistema dentro de su ecosistema, resaltando a l
 
 ![Diagrama de Contexto](/diagrams/context.png)
 
-## Claves del contexto
+## Descripción
 
-* **Usuario como Actor Principal:** El _Usuario Suscriptor_ es la única **persona** que interactúa con el sistema, siendo el centro del negocio (pago de suscripción).
-* **Alcance del Sistema Principal:** La _Aplicación de Suscripción_ es vista como una **caja negra** única en este nivel, encapsulando los microservicios auth y payment.
-* **Dependencia Externa Crítica:** El sistema tiene una **dependencia fundamental** con el _Sistema de Pago Externo_ para poder cumplir con su propósito de negocio (procesar cobros).
-* **Interacción:** Todas las interacciones del usuario con el sistema principal se realizan a través de un **navegador web**.
+El sistema representa una plataforma de reservas y pagos basada en microservicios y un API Gateway. Los usuarios interactúan únicamente con el API Gateway, que actúa como punto de entrada central, encargándose de redirigir las solicitudes a los microservicios correspondientes.
+El sistema está compuesto por tres servicios principales:
+
+* **Auth Service:** gestiona la autenticación, registro y validación de tokens JWT.
+
+* **Payment Service:** maneja las transacciones financieras, conectándose con Stripe y su base de datos PostgreSQL.
+
+* **Reservation Service:** gestiona las reservas, integrando autenticación (Auth) y pagos (Payment) para completar flujos de negocio.
+
+El flujo de comunicación se orquesta mediante Kafka para eventos asíncronos (por ejemplo, confirmaciones de pago o actualizaciones de reserva).
+
+## Componentes externos
+
+* **Usuario / Cliente móvil o web:** envía peticiones HTTP al Gateway.
+
+* **Stripe API:** servicio externo usado por Payment Service para realizar cobros.
+
+* **Bases de datos:**
+
+    - MongoDB (Auth)
+
+    - PostgreSQL (Payment)
+
+    - PostgreSQL (Reservation)
+
+## Puntos clave 
+
+* Todo el tráfico pasa por el **API Gateway** (`/auth`, `/payment`, `/reservation`).
+
+* Los microservicios **no son accesibles directamente** desde el exterior.
+
+* Kafka actúa como **bus de mensajes interno** entre servicios.
  
