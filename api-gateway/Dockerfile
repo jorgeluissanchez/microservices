@@ -1,29 +1,11 @@
-FROM node:18-alpine as base
+# Etapa base
+FROM node:20-alpine AS base
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install -g pnpm && pnpm install
 
-RUN npm install -g pnpm
-
-WORKDIR /app
-
-COPY package.json pnpm-lock.yaml ./
-
-FROM base as development
-
-RUN pnpm install --frozen-lockfile
-
+# Etapa desarrollo
+FROM base AS development
+WORKDIR /usr/src/app
 COPY . .
-
-EXPOSE 3000
-
 CMD ["pnpm", "run", "start:dev"]
-
-FROM base as production
-
-RUN pnpm install --prod --frozen-lockfile
-
-COPY . .
-
-RUN pnpm run build
-
-EXPOSE 3000
-
-CMD ["pnpm", "run", "start:prod"]

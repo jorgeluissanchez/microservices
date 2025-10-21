@@ -4,23 +4,20 @@ services:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
-      target: development
-    command: pnpm run start:dev
+    command: node dist/main.js
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - KAFKA_BROKERS=kafka:29092
-      - KAFKA_CLIENT_ID=api-gateway
-      - KAFKA_AUTH_GROUP_ID=auth-consumer
-      - KAFKA_PAYMENT_GROUP_ID=payment-consumer
+      - AUTH_SERVICE_URL=http://auth:3001
+      - PAYMENT_SERVICE_URL=http://payment:3002
+      - RESERVATION_SERVICE_URL=http://reservation:3003
     ports:
       - '3000:3000'
-    volumes:
-      - ./api-gateway:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm_cache:/root/.local/share/pnpm
     depends_on:
       - kafka
+      - auth
+      - payment
+      - reservation
     networks:
       - microservices-network
     restart: unless-stopped

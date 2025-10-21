@@ -1,0 +1,29 @@
+# Este archivo extiende el docker-compose.yaml principal para el entorno de pruebas.
+# Permite usar bases de datos separadas para las pruebas y exponer los puertos
+# de manera diferente si fuera necesario, sin afectar el entorno de desarrollo.
+#
+# Uso: docker-compose -f docker-compose.yaml -f test/docker-compose.test.yaml up -d
+
+version: '3.8'
+
+services:
+  # Base de datos para el servicio de autenticación
+  mongo:
+    ports:
+      - '27017:27017' # Exponemos el puerto al host para que Jest pueda conectarse.
+    environment:
+      MONGO_INITDB_DATABASE: microservices_test # Usamos una base de datos de prueba
+
+  # Base de datos para el servicio de pagos
+  postgres-payment:
+    ports:
+      - '5432:5432' # Exponemos el puerto al host
+    environment:
+      POSTGRES_DB: payment_db_test # Base de datos de prueba
+
+  # Base de datos para el servicio de reservaciones
+  postgres-reservation:
+    ports:
+      - '5433:5432' # Exponemos en el puerto 5433 para evitar colisiones
+    environment:
+      POSTGRES_DB: reservation_db_test # Base de datos de prueba
