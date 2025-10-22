@@ -4,7 +4,9 @@
   "description": "API Gateway for microservices",
   "main": "dist/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:integration": "jest --config jest.config.js --runInBand test/integration",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "build": "nest build"
@@ -18,7 +20,7 @@
     "@nestjs/common": "^11.1.7",
     "@nestjs/core": "^11.1.7",
     "@nestjs/platform-express": "^11.1.7",
-    "axios": "^1.12.2",
+    "@nestjs/swagger": "^11.2.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "express": "^5.1.0",
@@ -26,10 +28,16 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
     "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^11.0.9",
+    "@types/axios": "^0.14.4",
     "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
+    "axios": "^1.12.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
