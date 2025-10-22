@@ -44,7 +44,7 @@ import { JwtStrategy } from '@/interface/http/strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: `${configService.get<string>('JWT_EXPIRATION')}s`,
+          expiresIn: parseInt(configService.get<string>('JWT_EXPIRATION') || '3600'),
         },
       }),
       inject: [ConfigService],
