@@ -7,8 +7,7 @@ import {
   ApiOperation, 
   ApiResponse, 
   ApiBody, 
-  ApiCookieAuth,
-  ApiBearerAuth 
+  ApiCookieAuth
 } from '@nestjs/swagger';
 import { LoginDto, CreateUserDto, LoginResponseDto, UserResponseDto } from '../dto/auth.dto';
 
@@ -38,14 +37,21 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   async login(@Body() loginDto: LoginDto, @Req() req: Request, @Res() res: Response) {
     const url = `${process.env.AUTH_SERVICE_URL}/auth/login`;
+    const forwardHeaders = { ...req.headers };
+    delete forwardHeaders.host;
+    delete forwardHeaders.connection;
+    delete forwardHeaders['content-length'];
+    delete forwardHeaders['accept-encoding'];
+
     try {
       const { data, status, headers } = await this.httpService.axiosRef({
         method: 'POST',
         url,
         data: loginDto,
-        headers: req.headers,
+        headers: forwardHeaders,
+        timeout: 5000
       });
-      
+
       // Forward the Set-Cookie header if present
       if (headers['set-cookie']) {
         res.setHeader('Set-Cookie', headers['set-cookie']);
@@ -73,11 +79,18 @@ export class AuthController {
   @ApiCookieAuth('Authentication')
   async getProfile(@Req() req: Request, @Res() res: Response) {
     const url = `${process.env.AUTH_SERVICE_URL}/auth/profile`;
+    const forwardHeaders = { ...req.headers };
+    delete forwardHeaders.host;
+    delete forwardHeaders.connection;
+    delete forwardHeaders['content-length'];
+    delete forwardHeaders['accept-encoding'];
+
     try {
       const { data, status } = await this.httpService.axiosRef({
         method: 'GET',
         url,
-        headers: req.headers,
+        headers: forwardHeaders,
+        timeout: 5000
       });
       res.status(status).json(data);
     } catch (error) {
@@ -87,6 +100,7 @@ export class AuthController {
     }
   }
 }
+
 
 @ApiTags('users')
 @Controller('users')
@@ -107,19 +121,42 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 409, description: 'El usuario ya existe' })
   async createUser(@Body() createUserDto: CreateUserDto, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.AUTH_SERVICE_URL}/users`;
+    const baseUrl = process.env.AUTH_SERVICE_URL;
+    if (!baseUrl) {
+      return res.status(500).json({ message: 'AUTH_SERVICE_URL is not configured on API Gateway' });
+    }
+
+    const url = `${baseUrl.replace(/\/$/, '')}/users`;
+
+    // Prevent accidental self-proxy
+    const gatewayHost = `http://${req.headers.host}`;
+    if (url.startsWith(gatewayHost)) {
+      return res.status(500).json({ message: 'Misconfigured AUTH_SERVICE_URL: points to API Gateway (self-proxy detected)' });
+    }
+
+    const forwardHeaders = { ...req.headers } as Record<string, any>;
+    delete forwardHeaders.host;
+    delete forwardHeaders.connection;
+    delete forwardHeaders['content-length'];
+    delete forwardHeaders['accept-encoding'];
+
     try {
       const { data, status } = await this.httpService.axiosRef({
         method: 'POST',
         url,
         data: createUserDto,
-        headers: req.headers,
+        headers: forwardHeaders,
+        timeout: 5000,
+        maxRedirects: 3,
       });
       res.status(status).json(data);
     } catch (error) {
       const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Auth service error' });
+      const status = axiosError.response?.status || 502;
+      const message = axiosError.code === 'ECONNABORTED'
+        ? 'Auth service request timed out'
+        : axiosError.response?.data || { message: 'Auth service error' };
+      res.status(status).json(message);
     }
   }
 
@@ -136,18 +173,39 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiCookieAuth('Authentication')
   async getCurrentUser(@Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.AUTH_SERVICE_URL}/users`;
+    const baseUrl = process.env.AUTH_SERVICE_URL;
+    if (!baseUrl) {
+      return res.status(500).json({ message: 'AUTH_SERVICE_URL is not configured on API Gateway' });
+    }
+
+    const url = `${baseUrl.replace(/\/$/, '')}/users`;
+
+    const gatewayHost = `http://${req.headers.host}`;
+    if (url.startsWith(gatewayHost)) {
+      return res.status(500).json({ message: 'Misconfigured AUTH_SERVICE_URL: points to API Gateway (self-proxy detected)' });
+    }
+
+    const forwardHeaders = { ...req.headers } as Record<string, any>;
+    delete forwardHeaders.host;
+    delete forwardHeaders.connection;
+    delete forwardHeaders['accept-encoding'];
+
     try {
       const { data, status } = await this.httpService.axiosRef({
         method: 'GET',
         url,
-        headers: req.headers,
+        headers: forwardHeaders,
+        timeout: 5000,
+        maxRedirects: 3,
       });
       res.status(status).json(data);
     } catch (error) {
       const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Auth service error' });
+      const status = axiosError.response?.status || 502;
+      const message = axiosError.code === 'ECONNABORTED'
+        ? 'Auth service request timed out'
+        : axiosError.response?.data || { message: 'Auth service error' };
+      res.status(status).json(message);
     }
   }
 }
