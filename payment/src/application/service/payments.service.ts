@@ -2,12 +2,12 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { CreateChargeDto } from '@/libs/common/src/dto/create-charge.dto';
-import { 
-  CreatePaymentDto, 
-  UpdatePaymentDto, 
-  GetPaymentsDto, 
+import {
+  CreatePaymentDto,
+  UpdatePaymentDto,
+  GetPaymentsDto,
   PaymentResponseDto,
-  PaginatedResponseDto 
+  PaginatedResponseDto
 } from '../dto';
 
 @Injectable()
@@ -40,18 +40,14 @@ export class PaymentsService {
 
   async createPayment(createPaymentDto: CreatePaymentDto): Promise<PaymentResponseDto> {
     try {
-      const { card, amount, currency = 'usd', description, customer_email, reservation_id } = createPaymentDto;
+      const { amount, currency = 'usd', description, customer_email, reservation_id } = createPaymentDto;
 
       // Create payment method
       const paymentMethod = await this.stripe.paymentMethods.create({
         type: 'card',
-        card: {
-          number: card.number,
-          exp_month: card.exp_month,
-          exp_year: card.exp_year,
-          cvc: card.cvc,
-        },
+        card: { token: createPaymentDto.token || 'tok_visa' }, // usa el token enviado o uno por defecto
       });
+
 
       // Create payment intent
       const paymentIntent = await this.stripe.paymentIntents.create({
@@ -76,26 +72,24 @@ export class PaymentsService {
   async getPayments(query: GetPaymentsDto): Promise<PaginatedResponseDto<PaymentResponseDto>> {
     try {
       const { page = 1, limit = 10, status } = query;
-      
-      const params: any = {
-        limit: limit,
+
+      const paymentIntents = await this.stripe.paymentIntents.list({
+        limit,
         starting_after: page > 1 ? `pi_${(page - 1) * limit}` : undefined,
-      };
+      });
+
+      let payments = paymentIntents.data.map(payment => this.mapStripePaymentToResponse(payment));
 
       if (status) {
-        params.status = status;
+        payments = payments.filter(p => p.status === status);
       }
 
-      const paymentIntents = await this.stripe.paymentIntents.list(params);
-      
-      const payments = paymentIntents.data.map(payment => this.mapStripePaymentToResponse(payment));
-      
       return {
         data: payments,
         page,
         limit,
-        total: paymentIntents.data.length,
-        totalPages: Math.ceil(paymentIntents.data.length / limit),
+        total: payments.length,
+        totalPages: Math.ceil(payments.length / limit),
         hasNext: paymentIntents.has_more,
         hasPrev: page > 1,
       };
@@ -103,6 +97,7 @@ export class PaymentsService {
       throw new BadRequestException(`Failed to retrieve payments: ${error.message}`);
     }
   }
+
 
   async getPayment(id: string): Promise<PaymentResponseDto> {
     try {
@@ -119,15 +114,15 @@ export class PaymentsService {
   async updatePayment(id: string, updatePaymentDto: UpdatePaymentDto): Promise<PaymentResponseDto> {
     try {
       const { status, description } = updatePaymentDto;
-      
+
       const updateParams: Stripe.PaymentIntentUpdateParams = {};
-      
+
       if (description) {
         updateParams.description = description;
       }
 
       const paymentIntent = await this.stripe.paymentIntents.update(id, updateParams);
-      
+
       return this.mapStripePaymentToResponse(paymentIntent);
     } catch (error) {
       if (error.code === 'resource_missing') {
