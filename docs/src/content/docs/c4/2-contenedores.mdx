@@ -1,0 +1,80 @@
+---
+title: Nivel 2 - Contenedores
+description: Diagrama de contenedores del sistema según el modelo C4.
+---
+
+Aquí se muestran los servicios principales que conforman el sistema.
+
+## Diagrama de Contenedores
+
+![Diagrama de Contenedores](/diagrams/containers.png)
+
+## Descripción general
+
+Cada componente del sistema corre en su propio contenedor Docker, y el despliegue se orquesta con Docker Compose o Kubernetes.
+
+**Contenedores principales:**
+
+* API Gateway
+
+    - Framework: NestJS + Express
+
+    - Rol: enrutamiento HTTP, comunicación REST con microservicios.
+
+    - Expone: puerto 3000
+
+    - Comunicación interna: hacia auth:3001, payment:3002, reservation:3003.
+
+* Auth Service
+
+    - Framework: NestJS + MongoDB
+
+    - Función: autenticación JWT, registro y validación de usuarios.
+
+    - Base de datos: MongoDB (contenedor mongo)
+
+    - Comunicación: recibe solicitudes REST desde el Gateway y emite eventos Kafka.
+
+* Payment Service
+
+    - Framework: NestJS + PostgreSQL
+
+    - Función: gestión de pagos con Stripe.
+
+    - Base de datos: postgres-payment
+
+    - Comunicación: REST + Kafka.
+
+* Reservation Service
+
+    - Framework: NestJS + PostgreSQL
+
+    - Función: crea y gestiona reservas, interactuando con Auth y Payment.
+
+    - Comunicación: REST + Kafka.
+
+* Kafka + Zookeeper
+
+    - Infraestructura para mensajería asíncrona.
+
+    - Cada microservicio actúa como productor/consumidor de eventos.
+
+* Kafka UI
+
+    - Dashboard de monitoreo para tópicos y consumidores Kafka.
+
+* Bases de datos
+
+    - MongoDB: usuarios y credenciales.
+
+    - PostgreSQL (Payment y Reservation): operaciones financieras y reservas.
+
+## Puntos clave
+
+* La comunicación **sincrónica** (HTTP) pasa siempre por el API Gateway.
+
+* La comunicación **asíncrona** se maneja con Kafka.
+
+* Cada microservicio mantiene su propia base de datos (patrón Database per Service).
+
+* El despliegue completo se puede levantar con docker-compose up o los manifiestos de Kubernetes.

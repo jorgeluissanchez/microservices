@@ -1,30 +1,174 @@
 services:
-  reservations:
+  # API Gateway Service
+  api-gateway:
     build:
-      context: .
-      dockerfile: apps/reservations/Dockerfile
-      target: development
-    command: npm run start:dev reservations
-    env_file:
-      - ./apps/reservations/.env
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    command: node dist/main.js
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth:3001
+      - PAYMENT_SERVICE_URL=http://payment:3002
+      - RESERVATION_SERVICE_URL=http://reservation:3003
     ports:
       - '3000:3000'
-    volumes:
-      - .:/usr/src/app
+    depends_on:
+      - kafka
+      - auth
+      - payment
+      - reservation
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
   auth:
     build:
-      context: .
-      dockerfile: apps/auth/Dockerfile
+      context: ./auth
+      dockerfile: Dockerfile
       target: development
-    command: npm run start:dev auth
-    env_file:
-      - apps/auth/.env
+    command: pnpm run start:dev
+    environment:
+      - NODE_ENV=development
+      - HTTP_PORT=3001
+      - TCP_PORT=3004
+      - MONGODB_URI=mongodb://root:password123@mongo:27017/microservices?authSource=admin
+      - JWT_SECRET=your-jwt-secret-here
+      - JWT_EXPIRATION=3600
     ports:
       - '3001:3001'
     volumes:
-      - .:/usr/src/app
+      - ./auth:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm_cache:/root/.local/share/pnpm
+    depends_on:
+      - mongo
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  payment:
+    build:
+      context: ./payment
+      dockerfile: Dockerfile
+      target: development
+    command: pnpm run start:dev
+    environment:
+      - NODE_ENV=development
+      - HTTP_PORT=3002
+      - TCP_PORT=3005
+      - POSTGRES_HOST=postgres-payment
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=payment_db
+      - POSTGRES_USERNAME=payment_user
+      - POSTGRES_PASSWORD=payment_password
+      - STRIPE_SECRET_KEY=your-stripe-secret-key-here
+    ports:
+      - '3002:3002'
+    volumes:
+      - ./payment:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm_cache:/root/.local/share/pnpm
+    depends_on:
+      - postgres-payment
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  reservation:
+    build:
+      context: ./reservation
+      dockerfile: Dockerfile
+      target: development
+    command: pnpm run start:dev
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - HTTP_PORT=3003
+      - TCP_PORT=3003
+      - POSTGRES_HOST=postgres-reservation
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=reservation_db
+      - POSTGRES_USERNAME=reservation_user
+      - POSTGRES_PASSWORD=reservation_password
+      - AUTH_HOST=auth
+      - AUTH_PORT=3004
+      - PAYMENTS_HOST=payment
+      - PAYMENTS_PORT=3005
+    ports:
+      - '3003:3003'
+    volumes:
+      - ./reservation:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm_cache:/root/.local/share/pnpm
+    depends_on:
+      - postgres-reservation
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Zookeeper Service
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - microservices-network
+
+  # Kafka Service
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - microservices-network
+
+  # Kafka UI Service
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - microservices-network
+
+  # MongoDB Service (for auth microservice)
   mongo:
-    image: mongo
+    image: mongo:7.0
+    container_name: mongo
     ports:
       - '27017:27017'
     environment:
@@ -33,6 +177,54 @@ services:
       MONGO_INITDB_DATABASE: microservices
     volumes:
       - mongo_data:/data/db
+    networks:
+      - microservices-network
+
+  # PostgreSQL Service for Payment
+  postgres-payment:
+    image: postgres:15
+    container_name: postgres-payment
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_password
+    volumes:
+      - postgres_payment_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
+  # PostgreSQL Service for Reservation
+  postgres-reservation:
+    image: postgres:15
+    container_name: postgres-reservation
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_DB: reservation_db
+      POSTGRES_USER: reservation_user
+      POSTGRES_PASSWORD: reservation_password
+    volumes:
+      - postgres_reservation_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
 
 volumes:
+  zookeeper-data:
+    driver: local
+  zookeeper-logs:
+    driver: local
+  kafka-data:
+    driver: local
   mongo_data:
+    driver: local
+  postgres_payment_data:
+    driver: local
+  postgres_reservation_data:
+    driver: local
+  pnpm_cache:
+
+networks:
+  microservices-network:
+    driver: bridge
