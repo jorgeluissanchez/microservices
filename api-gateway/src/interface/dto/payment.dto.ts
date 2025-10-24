@@ -1,86 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsEmail, Min, Max, IsCreditCard, IsNotEmpty } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEmail, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export class CardDto {
-  @ApiProperty({
-    description: 'Card security code (CVC)',
-    example: '123',
-    minLength: 3,
-    maxLength: 4
-  })
-  @IsString()
-  @IsNotEmpty()
-  cvc!: string;
-
-  @ApiProperty({
-    description: 'Card expiration month',
-    example: 12,
-    minimum: 1,
-    maximum: 12
-  })
-  @IsNumber()
-  exp_month!: number;
-
-  @ApiProperty({
-    description: 'Card expiration year',
-    example: 2025,
-    minimum: 2024
-  })
-  @IsNumber()
-  exp_year!: number;
-
-  @ApiProperty({
-    description: 'Card number',
-    example: '4242424242424242',
-    pattern: '^[0-9]{13,19}$'
-  })
-  @IsCreditCard()
-  number!: string;
-}
-
-export class CreateChargeDto {
-  @ApiProperty({
-    description: 'Card information for the payment',
-    type: CardDto,
-    example: {
-      number: '4242424242424242',
-      exp_month: 12,
-      exp_year: 2025,
-      cvc: '123'
-    }
-  })
-  @Type(() => CardDto)
-  card!: CardDto;
-
-  @ApiProperty({
-    description: 'Amount to charge in cents',
-    example: 2000,
-    minimum: 1
-  })
-  @IsNumber()
-  amount!: number;
-}
 
 export class CreatePaymentDto {
   @ApiProperty({
-    description: 'Card information for the payment',
-    type: CardDto,
-    example: {
-      number: '4242424242424242',
-      exp_month: 12,
-      exp_year: 2025,
-      cvc: '123'
-    }
+    description: 'Test token or existing payment method ID from Stripe (e.g., tok_visa)',
+    example: 'tok_visa',
+    required: false,
   })
-  @Type(() => CardDto)
-  card!: CardDto;
+  @IsString()
+  @IsOptional()
+  token?: string;
 
   @ApiProperty({
     description: 'Amount to charge in cents',
     example: 2000,
     minimum: 50,
-    maximum: 99999999
+    maximum: 99999999,
   })
   @IsNumber()
   @Min(50)
@@ -91,7 +27,7 @@ export class CreatePaymentDto {
     description: 'Payment currency',
     example: 'usd',
     default: 'usd',
-    enum: ['usd', 'eur', 'gbp']
+    enum: ['usd', 'eur', 'gbp'],
   })
   @IsString()
   @IsOptional()
@@ -100,7 +36,7 @@ export class CreatePaymentDto {
   @ApiProperty({
     description: 'Payment description',
     example: 'Payment for reservation #12345',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()
@@ -109,7 +45,7 @@ export class CreatePaymentDto {
   @ApiProperty({
     description: 'Customer email',
     example: 'customer@example.com',
-    required: false
+    required: false,
   })
   @IsEmail()
   @IsOptional()
@@ -118,7 +54,7 @@ export class CreatePaymentDto {
   @ApiProperty({
     description: 'Reservation ID associated with this payment',
     example: 'res_1234567890',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()
@@ -219,55 +155,73 @@ export class GetPaymentsDto {
   sort_order?: string = 'desc';
 }
 
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+  CANCELED = 'CANCELED',
+}
+
 export class PaymentResponseDto {
   @ApiProperty({
-    description: 'Payment ID',
-    example: 'pi_1234567890abcdef'
+    description: 'Unique payment ID',
+    example: 'pi_1234567890abcdef',
+    type: 'string'
   })
   id!: string;
 
   @ApiProperty({
     description: 'Payment amount in cents',
-    example: 2000
+    example: 2000,
+    type: 'number'
   })
   amount!: number;
 
   @ApiProperty({
+    description: 'Payment status',
+    example: 'SUCCEEDED',
+    enum: PaymentStatus,
+    type: 'string'
+  })
+  status!: PaymentStatus;
+
+  @ApiProperty({
+    description: 'Payment creation timestamp',
+    example: 1640995200,
+    type: 'number'
+  })
+  created!: number;
+
+  @ApiProperty({
     description: 'Payment currency',
-    example: 'usd'
+    example: 'usd',
+    type: 'string'
   })
   currency!: string;
 
   @ApiProperty({
-    description: 'Payment status',
-    example: 'succeeded',
-    enum: ['pending', 'succeeded', 'failed', 'canceled']
-  })
-  status!: string;
-
-  @ApiProperty({
     description: 'Payment description',
-    example: 'Payment for reservation #12345'
+    example: 'Payment for reservation #12345',
+    type: 'string',
+    required: false
   })
   description?: string;
 
   @ApiProperty({
     description: 'Customer email',
-    example: 'customer@example.com'
+    example: 'customer@example.com',
+    type: 'string',
+    required: false
   })
-  customer_email?: string;
+  customerEmail?: string;
 
   @ApiProperty({
     description: 'Reservation ID',
-    example: 'res_1234567890'
+    example: 'res_12345',
+    type: 'string',
+    required: false
   })
-  reservation_id?: string;
-
-  @ApiProperty({
-    description: 'Payment creation date',
-    example: '2024-01-15T10:00:00Z'
-  })
-  created_at!: string;
+  reservationId?: string;
 }
 
 export class PaginatedResponseDto<T> {

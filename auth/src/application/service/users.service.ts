@@ -8,7 +8,6 @@ import {
 
 import { UserRepository } from '@/infrastructure/repository/user.repository';
 import { CreateUserDTO } from '@/application/dto/create-user.dto';
-import { GetUserDto } from '@/application/dto/get-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -19,20 +18,22 @@ export class UsersService {
     return this.userRepository.create({
       ...createUserDto,
       password: await bcryptjs.hash(createUserDto.password, 10),
+      role: createUserDto.role || 'user', // Default to 'user' if not specified
     });
   }
 
   private async validateCreateUserDto(createUserDto: CreateUserDTO) {
-    try {
-      await this.userRepository.findOne({ email: createUserDto.email });
-    } catch (error) {
-      return;
+    const existingUser = await this.userRepository.findOne({ email: createUserDto.email });
+    if (existingUser) {
+      throw new UnprocessableEntityException('Email already exists');
     }
-    throw new UnprocessableEntityException('Email already exists');
   }
 
   async verifyUser(email: string, password: string) {
     const user = await this.userRepository.findOne({ email });
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const passwordIsValid = await bcryptjs.compare(password, user.password);
     if (!passwordIsValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -40,7 +41,11 @@ export class UsersService {
     return user;
   }
 
-  async getUser(getUserDto: GetUserDto) {
-    return this.userRepository.findOne(getUserDto);
+  async getUser(email: string) {
+    return this.userRepository.findOne({ email });
+  }
+
+  async getUserById(id: string) {
+    return this.userRepository.findById(id);
   }
 }

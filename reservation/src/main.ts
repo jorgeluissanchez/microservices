@@ -1,40 +1,39 @@
-import cookieParser from 'cookie-parser';
-import { Logger } from 'nestjs-pino';
-
-import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
 import { ReservationsModule } from '@/infrastructure/http/module/reservations.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(ReservationsModule);
-  app.use(cookieParser());
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-    }),
-  );
-  app.useLogger(app.get(Logger));
   
+  // Enable CORS
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
+  // Global validation pipe
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
+  // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('Reservations Service API')
-    .setDescription('API de gestión de reservaciones')
+    .setTitle('Reservations API')
+    .setDescription('API for managing reservations')
     .setVersion('1.0')
-    .addTag('reservations', 'Gestión de reservaciones')
-    .addBearerAuth()
+    .addTag('reservations')
     .addCookieAuth('Authentication')
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  
-  const configService = app.get(ConfigService);
-  const port = configService.get<string | number>('PORT');
-  if (port === undefined) {
-    throw new Error('PORT is not defined in configuration');
-  }
+
+  const port = process.env.PORT || 3003;
   await app.listen(port);
+  console.log(`Reservations service running on port ${port}`);
 }
 bootstrap();

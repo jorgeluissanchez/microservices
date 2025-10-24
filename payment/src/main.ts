@@ -1,44 +1,38 @@
 import { NestFactory } from '@nestjs/core';
-import { PaymentsModule } from './interface/http/module/payments.module';
-import { Logger } from 'nestjs-pino';
-import { Transport } from '@nestjs/microservices';
-import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { PaymentsModule } from './interface/http/module/payments.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(PaymentsModule);
-  const configService = app.get(ConfigService);
   
-  // Swagger configuration
+  // Enable CORS
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
+  // Global validation pipe
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
+  // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('Payment Service API')
-    .setDescription('API documentation for the Payment microservice. This service handles payment processing using Stripe integration.')
+    .setTitle('Payments API')
+    .setDescription('API for managing payments with Stripe integration')
     .setVersion('1.0')
-    .addTag('payments', 'Payment processing operations')
-    .addBearerAuth()
-    .addCookieAuth('Authentication')
-    .addServer('http://localhost:3002', 'Development server')
+    .addTag('payments')
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  
-  app.connectMicroservice({
-    transport: Transport.TCP,
-    options: {
-      host: '0.0.0.0',
-      port: configService.get('TCP_PORT'),
-    },
-  });
 
-  app.useLogger(app.get(Logger));
-
-  await app.startAllMicroservices();
-  
-  const httpPort = configService.get<string | number>('HTTP_PORT');
-  if (httpPort === undefined) {
-    throw new Error('HTTP_PORT is not defined in configuration');
-  }
-  await app.listen(httpPort);
+  const port = process.env.PORT || 3002;
+  await app.listen(port);
+  console.log(`Payments service running on port ${port}`);
 }
 bootstrap();

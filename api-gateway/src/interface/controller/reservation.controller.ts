@@ -1,20 +1,10 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Req, Res } from '@nestjs/common';
-import { Request, Response } from 'express';
-import { AxiosError } from 'axios';
+import { Controller, Post, Patch, Body, Param, Req, Res } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiSecurity } from '@nestjs/swagger';
 import { HttpService } from '@nestjs/axios';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiBody, 
-  ApiParam,
-  ApiCookieAuth 
-} from '@nestjs/swagger';
-import { 
-  CreateReservationDto, 
-  UpdateReservationDto, 
-  ReservationResponseDto 
-} from '../dto/reservation.dto';
+import { AxiosError } from 'axios';
+import { Request, Response } from 'express';
+import { CreateReservationDto, ChangeReservationStatusDto, ReservationResponseDto } from '../dto/reservation.dto';
+import { CurrentUser } from '../../decorators/current-user.decorator';
 
 @ApiTags('reservations')
 @Controller('reservations')
@@ -23,8 +13,8 @@ export class ReservationController {
 
   @Post()
   @ApiOperation({ 
-    summary: 'Crear una nueva reservación',
-    description: 'Crea una nueva reservación con información de pago'
+    summary: 'Crear reservación pendiente desde un lugar',
+    description: 'Crea una nueva reservación en estado PENDING a partir de un ID de lugar válido. El userId y customerEmail se extraen automáticamente de la cookie de autenticación (Available to all authenticated users)'
   })
   @ApiBody({ type: CreateReservationDto })
   @ApiResponse({ 
@@ -33,139 +23,88 @@ export class ReservationController {
     type: ReservationResponseDto
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiCookieAuth('Authentication')
-  async create(@Body() createReservationDto: CreateReservationDto, @Req() req: Request, @Res() res: Response) {
+  @ApiResponse({ status: 404, description: 'Lugar no encontrado' })
+  @ApiSecurity('bearer')
+  async createReservationFromPlace(@Body() createReservationDto: CreateReservationDto, @CurrentUser() user: any, @Req() req: Request, @Res() res: Response) {
+    console.log('API Gateway: Received reservation request:', createReservationDto);
+    console.log('API Gateway: User from cookie:', user);
+    
+    // Extraer información del usuario de la cookie de autenticación
+    const userId = user?.userId || user?.id;
+    const customerEmail = user?.email || createReservationDto.customerEmail;
+    
+    // Preparar datos para el servicio de reservaciones (sin userId en el body)
+    const reservationData = {
+      ...createReservationDto,
+      customerEmail: customerEmail,
+    };
+    
+    console.log('API Gateway: Reservation data for service:', reservationData);
+    console.log('API Gateway: User ID (will be passed separately):', userId);
+    
     const url = `${process.env.RESERVATION_SERVICE_URL}/reservations`;
+    console.log('API Gateway: Creating reservation, URL:', url);
+    
     try {
-      const { data, status } = await this.httpService.axiosRef({
+      console.log('API Gateway: Making request to reservation service...');
+      const response = await fetch(url, {
         method: 'POST',
-        url,
-        data: createReservationDto,
-        headers: req.headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': userId, // Pasar userId como header personalizado
+        },
+        body: JSON.stringify(reservationData),
       });
-      res.status(status).json(data);
+      
+      console.log('API Gateway: Response status:', response.status);
+      const data = await response.json();
+      console.log('API Gateway: Response data:', data);
+      
+      res.status(response.status).json(data);
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Reservation service error' });
+      console.error('API Gateway: Error creating reservation:', error);
+      res.status(500).json({ message: 'Reservation service error', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
-  @Get()
+  @Patch(':id/status')
   @ApiOperation({ 
-    summary: 'Obtener todas las reservaciones',
-    description: 'Obtiene una lista de todas las reservaciones del usuario autenticado'
+    summary: 'Cambiar estado de reservación',
+    description: 'Cambia el estado de una reservación existente. Estados disponibles: PENDING, CONFIRMED, CANCELLED, REJECTED (Available to all authenticated users)'
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Lista de reservaciones',
-    type: [ReservationResponseDto]
-  })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiCookieAuth('Authentication')
-  async findAll(@Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.RESERVATION_SERVICE_URL}/reservations`;
-    try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'GET',
-        url,
-        headers: req.headers,
-      });
-      res.status(status).json(data);
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Reservation service error' });
-    }
-  }
-
-  @Get(':id')
-  @ApiOperation({ 
-    summary: 'Obtener una reservación por ID',
-    description: 'Obtiene una reservación específica por su ID'
-  })
-  @ApiParam({ name: 'id', description: 'ID de la reservación', example: '60d5f484f8d2e7001f5e7b3a' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Reservación encontrada',
-    type: ReservationResponseDto
+  @ApiParam({ name: 'id', description: 'ID de la reservación' })
+  @ApiBody({ type: ChangeReservationStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Estado de reservación actualizado exitosamente',
+    type: ReservationResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Reservación no encontrada' })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiCookieAuth('Authentication')
-  async findOne(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.RESERVATION_SERVICE_URL}/reservations/${id}`;
+  @ApiResponse({ status: 400, description: 'Estado inválido o no se puede cambiar' })
+  @ApiSecurity('bearer')
+  async changeReservationStatus(
+    @Param('id') id: string,
+    @Body() changeStatusDto: ChangeReservationStatusDto,
+    @CurrentUser() user: any,
+    @Req() req: Request,
+    @Res() res: Response
+  ) {
+    const url = `${process.env.RESERVATION_SERVICE_URL}/reservations/${id}/status`;
     try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'GET',
-        url,
-        headers: req.headers,
-      });
-      res.status(status).json(data);
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Reservation service error' });
-    }
-  }
-
-  @Patch(':id')
-  @ApiOperation({ 
-    summary: 'Actualizar una reservación',
-    description: 'Actualiza una reservación existente'
-  })
-  @ApiParam({ name: 'id', description: 'ID de la reservación', example: '60d5f484f8d2e7001f5e7b3a' })
-  @ApiBody({ type: UpdateReservationDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Reservación actualizada exitosamente',
-    type: ReservationResponseDto
-  })
-  @ApiResponse({ status: 404, description: 'Reservación no encontrada' })
-  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiCookieAuth('Authentication')
-  async update(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.RESERVATION_SERVICE_URL}/reservations/${id}`;
-    try {
-      const { data, status } = await this.httpService.axiosRef({
+      const response = await fetch(url, {
         method: 'PATCH',
-        url,
-        data: updateReservationDto,
-        headers: req.headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(changeStatusDto),
       });
-      res.status(status).json(data);
+      
+      const data = await response.json();
+      res.status(response.status).json(data);
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Reservation service error' });
+      console.error('API Gateway: Error changing reservation status:', error);
+      res.status(500).json({ message: 'Reservation service error', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
-  @Delete(':id')
-  @ApiOperation({ 
-    summary: 'Eliminar una reservación',
-    description: 'Elimina una reservación existente'
-  })
-  @ApiParam({ name: 'id', description: 'ID de la reservación', example: '60d5f484f8d2e7001f5e7b3a' })
-  @ApiResponse({ status: 200, description: 'Reservación eliminada exitosamente' })
-  @ApiResponse({ status: 404, description: 'Reservación no encontrada' })
-  @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiCookieAuth('Authentication')
-  async remove(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.RESERVATION_SERVICE_URL}/reservations/${id}`;
-    try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'DELETE',
-        url,
-        headers: req.headers,
-      });
-      res.status(status).json(data);
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Reservation service error' });
-    }
-  }
 }

@@ -1,31 +1,15 @@
-FROM node:20-alpine as base
-
-RUN npm install -g pnpm
+FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package*.json ./
 
-# Development stage
-FROM base as development
+RUN npm install
 
-RUN pnpm install --frozen-lockfile
+COPY . .
 
-COPY package.json pnpm-lock.yaml ./
-
-EXPOSE 3002
-
-# Production stage
-FROM base as production
-
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-
-RUN pnpm install --prod --frozen-lockfile
-
-COPY --from=development /usr/src/app/dist ./dist
-COPY --from=development /usr/src/app/package.json ./package.json
+RUN npm run build
 
 EXPOSE 3002
 
-CMD [ "node", "dist/main" ]
+CMD ["npm", "run", "start:prod"]

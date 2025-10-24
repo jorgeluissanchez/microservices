@@ -1,228 +1,212 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Param, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { AxiosError } from 'axios';
-import { HttpService } from '@nestjs/axios';
 import { 
   ApiTags, 
   ApiOperation, 
   ApiResponse, 
   ApiBody, 
   ApiParam,
-  ApiQuery,
-  ApiCookieAuth 
+  ApiSecurity
 } from '@nestjs/swagger';
 import { 
   CreatePaymentDto, 
-  UpdatePaymentDto, 
-  GetPaymentsDto, 
-  PaymentResponseDto,
-  PaginatedResponseDto 
+  PaymentResponseDto
 } from '../dto/payment.dto';
+import { CurrentUser } from '../../decorators/current-user.decorator';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentController {
-  constructor(private readonly httpService: HttpService) {}
+  constructor() {}
 
   @Post()
   @ApiOperation({ 
-    summary: 'Create a new payment',
-    description: 'Process a new payment with card information'
+    summary: 'Crear pago y obtener link de Stripe',
+    description: 'Crea un nuevo pago y devuelve el link de Stripe para procesar el pago (Available to all authenticated users)'
   })
   @ApiBody({ type: CreatePaymentDto })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Payment created successfully',
-    type: PaymentResponseDto
+  @ApiResponse({
+    status: 201,
+    description: 'Pago creado exitosamente con link de Stripe',
+    schema: {
+      type: 'object',
+      properties: {
+        paymentUrl: {
+          type: 'string',
+          description: 'URL de Stripe para procesar el pago',
+          example: 'https://checkout.stripe.com/pay/cs_test_1234567890'
+        },
+        paymentId: {
+          type: 'string',
+          description: 'ID del pago creado',
+          example: 'pi_1234567890abcdef'
+        }
+      }
+    }
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Bad request - Invalid payment data' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized - Authentication required' 
-  })
-  @ApiResponse({ 
-    status: 500, 
-    description: 'Internal server error' 
-  })
-  @ApiCookieAuth('Authentication')
-  async createPayment(@Body() createPaymentDto: CreatePaymentDto, @Req() req: Request, @Res() res: Response) {
+  @ApiResponse({ status: 400, description: 'Datos de pago inválidos' })
+  @ApiResponse({ status: 500, description: 'Error al crear el pago' })
+  @ApiSecurity('bearer')
+  async createPayment(@Body() createPaymentDto: CreatePaymentDto, @CurrentUser() user: any, @Req() req: Request, @Res() res: Response) {
+    console.log('API Gateway: Creating payment request:', createPaymentDto);
+    console.log('API Gateway: User from cookie:', user);
+    
     const url = `${process.env.PAYMENT_SERVICE_URL}/payments`;
+    console.log('API Gateway: Payment service URL:', url);
+    
     try {
-      const { data, status } = await this.httpService.axiosRef({
+      console.log('API Gateway: Making request to payment service...');
+      const response = await fetch(url, {
         method: 'POST',
-        url,
-        data: createPaymentDto,
-        headers: req.headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createPaymentDto),
       });
-      res.status(status).json(data);
+      
+      console.log('API Gateway: Payment service response status:', response.status);
+      const data = await response.json();
+      console.log('API Gateway: Payment service response data:', data);
+      
+      res.status(response.status).json(data);
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Payment service error' });
+      console.error('API Gateway: Error creating payment:', error);
+      res.status(500).json({ message: 'Payment service error', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
-  @Get()
+  @Post('webhook')
   @ApiOperation({ 
-    summary: 'Get all payments',
-    description: 'Retrieve a paginated list of payments with optional filters'
+    summary: 'Webhook de Stripe para confirmar pagos',
+    description: 'Endpoint para recibir notificaciones de Stripe sobre el estado de los pagos'
   })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
-  @ApiQuery({ name: 'status', required: false, type: String, description: 'Filter by status' })
-  @ApiQuery({ name: 'customer_email', required: false, type: String, description: 'Filter by customer email' })
-  @ApiQuery({ name: 'reservation_id', required: false, type: String, description: 'Filter by reservation ID' })
-  @ApiQuery({ name: 'sort_by', required: false, type: String, description: 'Sort field' })
-  @ApiQuery({ name: 'sort_order', required: false, type: String, description: 'Sort order' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Payments retrieved successfully',
-    type: PaginatedResponseDto<PaymentResponseDto>
+  @ApiBody({
+    description: 'Evento de Stripe',
+    schema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          example: 'payment_intent.succeeded'
+        },
+        data: {
+          type: 'object',
+          properties: {
+            object: {
+              type: 'object',
+              description: 'Objeto PaymentIntent de Stripe'
+            }
+          }
+        }
+      }
+    }
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Bad request - Invalid query parameters' 
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook procesado exitosamente'
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized - Authentication required' 
-  })
-  @ApiCookieAuth('Authentication')
-  async getPayments(@Query() query: GetPaymentsDto, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.PAYMENT_SERVICE_URL}/payments`;
+  @ApiResponse({ status: 400, description: 'Evento de Stripe inválido' })
+  async handleStripeWebhook(@Body() event: any, @Req() req: Request, @Res() res: Response) {
+    console.log('API Gateway: Handling Stripe webhook:', event);
+    const url = `${process.env.PAYMENT_SERVICE_URL}/payments/webhook`;
+    console.log('API Gateway: Webhook URL:', url);
+    
     try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'GET',
-        url,
-        params: query,
-        headers: req.headers,
+      console.log('API Gateway: Making webhook request to payment service...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(event),
       });
-      res.status(status).json(data);
+      
+      console.log('API Gateway: Webhook response status:', response.status);
+      const data = await response.json();
+      console.log('API Gateway: Webhook response data:', data);
+      
+      res.status(response.status).json(data);
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Payment service error' });
+      console.error('API Gateway: Error handling webhook:', error);
+      res.status(500).json({ message: 'Payment service error', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
-  @Get(':id')
+  @Post(':id/confirm')
   @ApiOperation({ 
-    summary: 'Get payment by ID',
-    description: 'Retrieve a specific payment by its ID'
+    summary: 'Confirmar pago completado',
+    description: 'Confirma que un pago fue completado exitosamente y actualiza la reservación (Available to all authenticated users)'
   })
-  @ApiParam({ name: 'id', description: 'Payment ID', example: 'pi_1234567890abcdef' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Payment retrieved successfully',
-    type: PaymentResponseDto
+  @ApiParam({ name: 'id', description: 'ID del pago' })
+  @ApiResponse({
+    status: 200,
+    description: 'Pago confirmado exitosamente',
+    type: PaymentResponseDto,
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Payment not found' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized - Authentication required' 
-  })
-  @ApiCookieAuth('Authentication')
-  async getPayment(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.PAYMENT_SERVICE_URL}/payments/${id}`;
+  @ApiResponse({ status: 404, description: 'Pago no encontrado' })
+  @ApiResponse({ status: 400, description: 'Pago ya confirmado o fallido' })
+  @ApiSecurity('bearer')
+  async confirmPayment(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
+    console.log('API Gateway: Confirming payment:', id);
+    const url = `${process.env.PAYMENT_SERVICE_URL}/payments/${id}/confirm`;
+    console.log('API Gateway: Confirm payment URL:', url);
+    
     try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'GET',
-        url,
-        headers: req.headers,
+      console.log('API Gateway: Making confirm payment request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      res.status(status).json(data);
+      
+      console.log('API Gateway: Confirm payment response status:', response.status);
+      const data = await response.json();
+      console.log('API Gateway: Confirm payment response data:', data);
+      
+      res.status(response.status).json(data);
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Payment service error' });
+      console.error('API Gateway: Error confirming payment:', error);
+      res.status(500).json({ message: 'Payment service error', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
-  @Put(':id')
+  @Post(':id/fail')
   @ApiOperation({ 
-    summary: 'Update payment',
-    description: 'Update payment status or description'
+    summary: 'Marcar pago como fallido',
+    description: 'Marca un pago como fallido y cancela la reservación asociada (Available to all authenticated users)'
   })
-  @ApiParam({ name: 'id', description: 'Payment ID', example: 'pi_1234567890abcdef' })
-  @ApiBody({ type: UpdatePaymentDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Payment updated successfully',
-    type: PaymentResponseDto
+  @ApiParam({ name: 'id', description: 'ID del pago' })
+  @ApiResponse({
+    status: 200,
+    description: 'Pago marcado como fallido exitosamente',
+    type: PaymentResponseDto,
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Payment not found' 
-  })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Bad request - Invalid update data' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized - Authentication required' 
-  })
-  @ApiCookieAuth('Authentication')
-  async updatePayment(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.PAYMENT_SERVICE_URL}/payments/${id}`;
+  @ApiResponse({ status: 404, description: 'Pago no encontrado' })
+  @ApiSecurity('bearer')
+  async failPayment(@Param('id') id: string, @CurrentUser() user: any, @Req() req: Request, @Res() res: Response) {
+    console.log('API Gateway: Failing payment:', id);
+    const url = `${process.env.PAYMENT_SERVICE_URL}/payments/${id}/fail`;
+    console.log('API Gateway: Fail payment URL:', url);
+    
     try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'PUT',
-        url,
-        data: updatePaymentDto,
-        headers: req.headers,
+      console.log('API Gateway: Making fail payment request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      res.status(status).json(data);
+      
+      console.log('API Gateway: Fail payment response status:', response.status);
+      const data = await response.json();
+      console.log('API Gateway: Fail payment response data:', data);
+      
+      res.status(response.status).json(data);
     } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Payment service error' });
+      console.error('API Gateway: Error failing payment:', error);
+      res.status(500).json({ message: 'Payment service error', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
 
-  @Delete(':id')
-  @ApiOperation({ 
-    summary: 'Cancel payment',
-    description: 'Cancel a pending payment'
-  })
-  @ApiParam({ name: 'id', description: 'Payment ID', example: 'pi_1234567890abcdef' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Payment canceled successfully',
-    type: PaymentResponseDto
-  })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Payment not found' 
-  })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Bad request - Payment cannot be canceled' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized - Authentication required' 
-  })
-  @ApiCookieAuth('Authentication')
-  async cancelPayment(@Param('id') id: string, @Req() req: Request, @Res() res: Response) {
-    const url = `${process.env.PAYMENT_SERVICE_URL}/payments/${id}`;
-    try {
-      const { data, status } = await this.httpService.axiosRef({
-        method: 'DELETE',
-        url,
-        headers: req.headers,
-      });
-      res.status(status).json(data);
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      res.status(status).json(axiosError.response?.data || { message: 'Payment service error' });
-    }
-  }
 }

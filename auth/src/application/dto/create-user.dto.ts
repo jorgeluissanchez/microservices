@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsStrongPassword } from 'class-validator';
+import { IsEmail, IsString, IsStrongPassword, IsOptional, IsIn } from 'class-validator';
 
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -20,4 +20,16 @@ export class CreateUserDTO {
   @IsString()
   @IsStrongPassword()
   password: string;
+
+  @ApiProperty({
+    description: 'Rol del usuario',
+    example: 'user',
+    enum: ['user', 'admin'],
+    default: 'user',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['user', 'admin'])
+  role?: string;
 }

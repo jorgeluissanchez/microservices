@@ -1,0 +1,890 @@
+{
+	"info": {
+		"_postman_id": "f52511ea-70ed-4b62-bd26-f7b42a65b17d",
+		"name": "Microservices API",
+		"description": "Colección completa CORREGIDA para probar todos los endpoints del sistema de microservicios con autenticación por roles",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18051307"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user1@example.com\",\n  \"password\": \"User123!\",\n  \"role\": \"user\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						},
+						"description": "Registra un nuevo usuario en el sistema"
+					},
+					"response": []
+				},
+				{
+					"name": "Register Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin123!\",\n  \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						},
+						"description": "Registra un nuevo usuario con rol de administrador"
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Guardar la cookie de autenticación",
+									"if (pm.response.code === 200) {",
+									"    const cookies = pm.response.headers.get('Set-Cookie');",
+									"    if (cookies) {",
+									"        pm.environment.set('auth_cookie', cookies);",
+									"        console.log('Cookie guardada:', cookies);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user1@example.com\",\n  \"password\": \"User123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Inicia sesión con un usuario y guarda la cookie de autenticación"
+					},
+					"response": []
+				},
+				{
+					"name": "Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Guardar la cookie de autenticación para admin",
+									"if (pm.response.code === 200) {",
+									"    const cookies = pm.response.headers.get('Set-Cookie');",
+									"    if (cookies) {",
+									"        pm.environment.set('admin_auth_cookie', cookies);",
+									"        console.log('Cookie de admin guardada:', cookies);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Inicia sesión con un administrador y guarda la cookie de autenticación"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Obtiene el perfil del usuario autenticado"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de autenticación y gestión de usuarios"
+		},
+		{
+			"name": "🏢 Places Management",
+			"item": [
+				{
+					"name": "Get All Places",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/places",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places"
+							]
+						},
+						"description": "Obtiene todos los lugares disponibles (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Place by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/places/{{place_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places",
+								"{{place_id}}"
+							]
+						},
+						"description": "Obtiene un lugar específico por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Place (Admin Only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Guardar el ID del lugar creado",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('place_id', response._id);",
+									"    console.log('Place ID guardado:', response._id);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Hotel Marriot\",\n  \"description\": \"Hotel de lujo en el centro de la ciudad\",\n  \"address\": \"Av. Principal 123\",\n  \"city\": \"Madrid\",\n  \"country\": \"España\",\n  \"capacity\": 100,\n  \"pricePerDay\": 15000,\n  \"amenities\": [\n    \"WiFi\",\n    \"Parking\",\n    \"Piscina\"\n  ],\n  \"images\": [\n    \"https://example.com/image1.jpg\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/places",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places"
+							]
+						},
+						"description": "Crea un nuevo lugar (solo administradores)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Place (Admin Only)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Hotel Paradise Resor\",\n  \"description\": \"Un hermoso hotel frente al mar con todas las comodidades\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/places/{{place_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places",
+								"{{place_id}}"
+							]
+						},
+						"description": "Actualiza un lugar existente (solo administradores)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Place (Admin Only)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{admin_auth_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/places/{{place_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places",
+								"{{place_id}}"
+							]
+						},
+						"description": "Elimina un lugar (solo administradores)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de lugares (CRUD completo)"
+		},
+		{
+			"name": "🏨 Reservations",
+			"item": [
+				{
+					"name": "Create Reservation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Guardar el ID de la reservación y datos de pago",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('reservation_id', response._id);",
+									"    pm.environment.set('payment_id', response.paymentId);",
+									"    pm.environment.set('payment_url', response.paymentUrl);",
+									"    console.log('Reservation ID:', response._id);",
+									"    console.log('Payment ID:', response.paymentId);",
+									"    console.log('Payment URL:', response.paymentUrl);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"placeId\": \"{{place_id}}\",\n  \"startDate\": \"2024-02-15T10:00:00Z\",\n  \"endDate\": \"2024-02-17T12:00:00Z\",\n  \"amount\": 15000,\n  \"currency\": \"usd\",\n  \"customerEmail\": \"cliente@ejemplo.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reservations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservations"
+							]
+						},
+						"description": "Crea una nueva reservación con autenticación. El userId y customerEmail se extraen automáticamente de la cookie."
+					},
+					"response": []
+				},
+				{
+					"name": "Change Reservation Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reservations/{{reservation_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservations",
+								"{{reservation_id}}",
+								"status"
+							]
+						},
+						"description": "Cambia el estado de una reservación (requiere autenticación)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de reservaciones"
+		},
+		{
+			"name": "💳 Payments",
+			"item": [
+				{
+					"name": "Create Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Guardar datos del pago",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('payment_id', response.paymentId);",
+									"    pm.environment.set('payment_url', response.paymentUrl);",
+									"    console.log('Payment ID:', response.paymentId);",
+									"    console.log('Payment URL:', response.paymentUrl);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"tok_visa\",\n  \"amount\": 2000,\n  \"currency\": \"usd\",\n  \"description\": \"Payment for reservation #12345\",\n  \"customer_email\": \"customer@example.com\",\n  \"reservation_id\": \"{{reservation_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments"
+							]
+						},
+						"description": "Crea un nuevo pago y devuelve el link de Stripe (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Confirm Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Verificar que la respuesta sea exitosa",
+									"pm.test('Payment confirmation successful', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"// Verificar que el pago esté confirmado",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.test('Payment status is SUCCEEDED', function () {",
+									"        pm.expect(response.status).to.equal('SUCCEEDED');",
+									"    });",
+									"    ",
+									"    console.log('Payment confirmed successfully:', response);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/{{payment_id}}/confirm",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"{{payment_id}}",
+								"confirm"
+							]
+						},
+						"description": "✅ CORREGIDO: Confirma un pago exitoso. NO requiere body, solo el ID del pago en la URL y autenticación."
+					},
+					"response": []
+				},
+				{
+					"name": "Fail Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Verificar que la respuesta sea exitosa",
+									"pm.test('Payment failure processed', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"// Verificar que el pago esté marcado como fallido",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.test('Payment status is FAILED', function () {",
+									"        pm.expect(response.status).to.equal('FAILED');",
+									"    });",
+									"    ",
+									"    console.log('Payment marked as failed:', response);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/{{payment_id}}/fail",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"{{payment_id}}",
+								"fail"
+							]
+						},
+						"description": "✅ CORREGIDO: Marca un pago como fallido. NO requiere body, solo el ID del pago en la URL y autenticación."
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de pagos con Stripe - CORREGIDO"
+		},
+		{
+			"name": "🔄 Complete Flow Test",
+			"item": [
+				{
+					"name": "1. Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"TestUser123!\",\n  \"role\": \"user\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const cookies = pm.response.headers.get('Set-Cookie');",
+									"    if (cookies) {",
+									"        pm.environment.set('auth_cookie', cookies);",
+									"        console.log('Cookie guardada:', cookies);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"TestUser123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3. Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4. Get Places",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/places",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5. Create Place (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('place_id', response._id);",
+									"    console.log('Place ID guardado:', response._id);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Hotel Test\",\n  \"description\": \"Hotel para pruebas\",\n  \"address\": \"Test Address 123\",\n  \"city\": \"Test City\",\n  \"country\": \"Test Country\",\n  \"capacity\": 50,\n  \"pricePerDay\": 10000,\n  \"amenities\": [\"WiFi\", \"Parking\"],\n  \"images\": [\"https://example.com/test.jpg\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/places",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"places"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6. Create Reservation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('reservation_id', response._id);",
+									"    pm.environment.set('payment_id', response.paymentId);",
+									"    pm.environment.set('payment_url', response.paymentUrl);",
+									"    console.log('Reservation created:', response);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"placeId\": \"{{place_id}}\",\n  \"startDate\": \"2024-02-15T10:00:00Z\",\n  \"endDate\": \"2024-02-17T12:00:00Z\",\n  \"amount\": 15000,\n  \"currency\": \"usd\",\n  \"customerEmail\": \"cliente@ejemplo.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reservations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7. Confirm Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Payment confirmation successful', function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.test('Payment status is SUCCEEDED', function () {",
+									"        pm.expect(response.status).to.equal('SUCCEEDED');",
+									"    });",
+									"    console.log('Payment confirmed:', response);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/{{payment_id}}/confirm",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"{{payment_id}}",
+								"confirm"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Flujo completo de la aplicación paso a paso - CORREGIDO"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Configuración global de la colección",
+					"console.log('Ejecutando request:', pm.info.requestName);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Tests globales",
+					"pm.test('Response time is less than 5000ms', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"pm.test('Response has valid JSON', function () {",
+					"    if (pm.response.headers.get('Content-Type') && pm.response.headers.get('Content-Type').includes('application/json')) {",
+					"        pm.response.to.have.jsonBody();",
+					"    }",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3004",
+			"type": "string"
+		},
+		{
+			"key": "place_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "reservation_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_url",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "auth_cookie",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_auth_cookie",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

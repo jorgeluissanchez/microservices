@@ -16,19 +16,16 @@ export class AuthService {
 
   async login(user: UserDocument, response: Response) {
     const tokenPayload: Tokenpayload = {
-      userId: user._id.toString(),
+      userId: user.id,
+      role: user.role,
     };
-
-    const expires = new Date();
-    expires.setSeconds(
-      expires.getSeconds() + this.configService.get('JWT_EXPIRATION'),
-    );
 
     const token = this.jwtService.sign(tokenPayload);
 
     response.cookie('Authentication', token, {
-      expires: expires,
       httpOnly: true,
+      secure: false, // Set to true in production with HTTPS
+      sameSite: 'lax',
     });
   }
 }

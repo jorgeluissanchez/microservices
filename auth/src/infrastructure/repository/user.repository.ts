@@ -3,16 +3,26 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Injectable, Logger } from '@nestjs/common';
 
-import { AbstractRepository } from '@/libs/common/src/database/abstract.repository';
 import { UserDocument } from '@/domain/entity/user.schema';
 
 @Injectable()
-export class UserRepository extends AbstractRepository<UserDocument> {
+export class UserRepository {
   protected readonly logger = new Logger(UserRepository.name);
   constructor(
     @InjectModel(UserDocument.name)
     protected readonly userModel: Model<UserDocument>,
-  ) {
-    super(userModel);
+  ) {}
+
+  async create(data: any) {
+    const user = new this.userModel(data);
+    return user.save();
+  }
+
+  async findOne(filter: any) {
+    return this.userModel.findOne(filter).exec();
+  }
+
+  async findById(id: string) {
+    return this.userModel.findById(id).exec();
   }
 }

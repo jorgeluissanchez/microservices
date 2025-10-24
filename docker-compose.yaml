@@ -1,229 +1,154 @@
 services:
-  # API Gateway Service
-  api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
-    command: node dist/main.js
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - AUTH_SERVICE_URL=http://auth:3001
-      - PAYMENT_SERVICE_URL=http://payment:3002
-      - RESERVATION_SERVICE_URL=http://reservation:3003
-    ports:
-      - '3000:3000'
-    depends_on:
-      - kafka
-      - auth
-      - payment
-      - reservation
-    networks:
-      - microservices-network
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: microservices-mongodb
     restart: unless-stopped
-
-  auth:
-    build:
-      context: ./auth
-      dockerfile: Dockerfile
-      target: development
-    command: pnpm run start:dev
-    environment:
-      - NODE_ENV=development
-      - HTTP_PORT=3001
-      - TCP_PORT=3004
-      - MONGODB_URI=mongodb://root:password123@mongo:27017/microservices?authSource=admin
-      - JWT_SECRET=your-jwt-secret-here
-      - JWT_EXPIRATION=3600
     ports:
-      - '3001:3001'
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
     volumes:
-      - ./auth:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm_cache:/root/.local/share/pnpm
-    depends_on:
-      - mongo
+      - mongodb_data:/data/db
     networks:
       - microservices-network
-    restart: unless-stopped
 
-  payment:
-    build:
-      context: ./payment
-      dockerfile: Dockerfile
-      target: development
-    command: pnpm run start:dev
-    environment:
-      - NODE_ENV=development
-      - HTTP_PORT=3002
-      - TCP_PORT=3005
-      - POSTGRES_HOST=postgres-payment
-      - POSTGRES_PORT=5432
-      - POSTGRES_DATABASE=payment_db
-      - POSTGRES_USERNAME=payment_user
-      - POSTGRES_PASSWORD=payment_password
-      - STRIPE_SECRET_KEY=your-stripe-secret-key-here
-    ports:
-      - '3002:3002'
-    volumes:
-      - ./payment:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm_cache:/root/.local/share/pnpm
-    depends_on:
-      - postgres-payment
-    networks:
-      - microservices-network
-    restart: unless-stopped
-
-  reservation:
-    build:
-      context: ./reservation
-      dockerfile: Dockerfile
-      target: development
-    command: pnpm run start:dev
-    environment:
-      - NODE_ENV=development
-      - PORT=3003
-      - HTTP_PORT=3003
-      - TCP_PORT=3003
-      - POSTGRES_HOST=postgres-reservation
-      - POSTGRES_PORT=5432
-      - POSTGRES_DATABASE=reservation_db
-      - POSTGRES_USERNAME=reservation_user
-      - POSTGRES_PASSWORD=reservation_password
-      - AUTH_HOST=auth
-      - AUTH_PORT=3004
-      - PAYMENTS_HOST=payment
-      - PAYMENTS_PORT=3005
-    ports:
-      - '3003:3003'
-    volumes:
-      - ./reservation:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm_cache:/root/.local/share/pnpm
-    depends_on:
-      - postgres-reservation
-    networks:
-      - microservices-network
-    restart: unless-stopped
-
-  # Zookeeper Service
+  # Kafka for messaging
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
-    hostname: zookeeper
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
+    container_name: microservices-zookeeper
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-logs:/var/lib/zookeeper/log
     networks:
       - microservices-network
 
-  # Kafka Service
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    hostname: kafka
-    container_name: kafka
+    container_name: microservices-kafka
+    restart: unless-stopped
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
-      - "9101:9101"
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-    volumes:
-      - kafka-data:/var/lib/kafka/data
     networks:
       - microservices-network
 
-  # Kafka UI Service
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
+  # Places Service
+  places-service:
+    build:
+      context: ./places
+      dockerfile: Dockerfile
+    container_name: microservices-places
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/places_db?authSource=admin
+      - NODE_ENV=production
     depends_on:
-      - kafka
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      - mongodb
     networks:
       - microservices-network
 
-  # MongoDB Service (for auth microservice)
-  mongo:
-    image: mongo:7.0
-    container_name: mongo
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: microservices-auth
+    restart: unless-stopped
     ports:
-      - '27017:27017'
+      - "3000:3000"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: microservices
-    volumes:
-      - mongo_data:/data/db
+      - PORT=3000
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/auth_db?authSource=admin
+      - JWT_SECRET=your-super-secret-jwt-key-here
+      - JWT_EXPIRATION=24h
+      - HTTP_PORT=3000
+      - TCP_PORT=3001
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
     networks:
       - microservices-network
 
-  # PostgreSQL Service for Payment
-  postgres-payment:
-    image: postgres:15
-    container_name: postgres-payment
+  # Reservations Service
+  reservations-service:
+    build:
+      context: ./reservation
+      dockerfile: Dockerfile
+    container_name: microservices-reservations
+    restart: unless-stopped
     ports:
-      - '5432:5432'
+      - "3003:3003"
     environment:
-      POSTGRES_DB: payment_db
-      POSTGRES_USER: payment_user
-      POSTGRES_PASSWORD: payment_password
-    volumes:
-      - postgres_payment_data:/var/lib/postgresql/data
+      - PORT=3003
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/reservations_db?authSource=admin
+      - PAYMENT_SERVICE_URL=http://payment-service:3002
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
     networks:
       - microservices-network
 
-  # PostgreSQL Service for Reservation
-  postgres-reservation:
-    image: postgres:15
-    container_name: postgres-reservation
+  # Payment Service
+  payment-service:
+    build:
+      context: ./payment
+      dockerfile: Dockerfile
+    container_name: microservices-payment
+    restart: unless-stopped
     ports:
-      - '5433:5432'
+      - "3002:3002"
     environment:
-      POSTGRES_DB: reservation_db
-      POSTGRES_USER: reservation_user
-      POSTGRES_PASSWORD: reservation_password
-    volumes:
-      - postgres_reservation_data:/var/lib/postgresql/data
+      - PORT=3002
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/payments_db?authSource=admin
+      - STRIPE_SECRET_KEY=
+      - FRONTEND_URL=http://localhost:3000
+      - RESERVATION_SERVICE_URL=http://reservations-service:3003
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+    networks:
+      - microservices-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: microservices-api-gateway
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - AUTH_SERVICE_URL=http://auth-service:3000
+      - PLACES_SERVICE_URL=http://places-service:3001
+      - PAYMENT_SERVICE_URL=http://payment-service:3002
+      - RESERVATION_SERVICE_URL=http://reservations-service:3003
+      - JWT_SECRET=your-super-secret-jwt-key-here
+      - NODE_ENV=production
+    depends_on:
+      - auth-service
+      - places-service
+      - payment-service
+      - reservations-service
     networks:
       - microservices-network
 
 volumes:
-  zookeeper-data:
-    driver: local
-  zookeeper-logs:
-    driver: local
-  kafka-data:
-    driver: local
-  mongo_data:
-    driver: local
-  postgres_payment_data:
-    driver: local
-  postgres_reservation_data:
-    driver: local
-  pnpm_cache:
+  mongodb_data:
 
 networks:
   microservices-network:

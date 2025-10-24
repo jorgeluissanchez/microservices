@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+  CANCELED = 'CANCELED',
+}
+
 export class PaymentResponseDto {
   @ApiProperty({
     description: 'Unique payment ID',
@@ -17,11 +24,11 @@ export class PaymentResponseDto {
 
   @ApiProperty({
     description: 'Payment status',
-    example: 'succeeded',
-    enum: ['succeeded', 'pending', 'failed', 'canceled'],
+    example: 'SUCCEEDED',
+    enum: PaymentStatus,
     type: 'string'
   })
-  status: string;
+  status: PaymentStatus;
 
   @ApiProperty({
     description: 'Payment creation timestamp',
@@ -44,4 +51,20 @@ export class PaymentResponseDto {
     required: false
   })
   description?: string;
+
+  @ApiProperty({
+    description: 'Customer email',
+    example: 'customer@example.com',
+    type: 'string',
+    required: false
+  })
+  customerEmail?: string;
+
+  @ApiProperty({
+    description: 'Reservation ID',
+    example: 'res_12345',
+    type: 'string',
+    required: false
+  })
+  reservationId?: string;
 }
