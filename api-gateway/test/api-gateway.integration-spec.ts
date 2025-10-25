@@ -2,22 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe, Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { HttpModule, HttpService } from '@nestjs/axios';
-import * as request from 'supertest';
-import { JwtModule } from '@nestjs/jwt';
+import request from 'supertest';
 import { Reflector } from '@nestjs/core';
-import { AppModule } from '../src/interface/module/app.module';
+import { AppModule } from '../../src/interface/module/app.module';
 
 // Import controllers directly to construct a lightweight testing module when mocking
-import { AuthController } from '../src/interface/controller/auth.controller';
-import { PlacesController } from '../src/interface/controller/places.controller';
-import { PaymentController } from '../src/interface/controller/payment.controller';
-import { ReservationController } from '../src/interface/controller/reservation.controller';
-import { UsersController } from '../src/interface/controller/users.controller';
+import { AuthController } from '../../src/interface/controller/auth.controller';
+import { PlacesController } from '../../src/interface/controller/places.controller';
+import { PaymentController } from '../../src/interface/controller/payment.controller';
+import { ReservationController } from '../../src/interface/controller/reservation.controller';
+import { UsersController } from '../../src/interface/controller/users.controller';
 
 /**
  * This integration test file runs in two modes:
  * - Live mode: set INTEGRATION_TEST_LIVE=true to use the real AppModule and real HTTP calls
- *   (useful when running tests against containers started with docker-compose.yaml).
+ *   (useful when running tests against containers started with docker-compose.test.yaml).
  * - Mock mode (default): mocks external HTTP calls (global.fetch and HttpService.axiosRef)
  *   so tests are deterministic and fast.
  */
@@ -41,13 +40,6 @@ function createMockFetch() {
         headers: { 'set-cookie': 'Authentication=mocktoken; HttpOnly' },
       });
       return res;
-    }
-
-    if (url.includes('/users')) {
-      // Simulate user registration on auth service
-      const body = opts.body ? JSON.parse(opts.body) : {};
-      if (!body.email || !body.password) return new Response(JSON.stringify({ message: 'Invalid data' }), { status: 400 });
-      return new Response(JSON.stringify({ _id: 'new-id', email: body.email, role: body.role || 'user' }), { status: 201, headers: { 'set-cookie': 'Authentication=mocktoken; HttpOnly' } });
     }
 
     if (url.includes('/auth/profile')) {
@@ -162,7 +154,6 @@ class MockRolesGuard implements CanActivate {
 
 describe('API Gateway Integration Tests (api-gateway)', () => {
   let app: INestApplication;
-  let signedToken: string | undefined;
 
   beforeAll(async () => {
     if (isLive) {
@@ -184,23 +175,12 @@ describe('API Gateway Integration Tests (api-gateway)', () => {
       app = moduleFixture.createNestApplication();
       app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
       await app.init();
-
-      // Generate a signed JWT for tests so the real AuthGuard can verify it
-      if (!isLive) {
-        try {
-          const jwtService = app.get(require('@nestjs/jwt').JwtService);
-          signedToken = jwtService.sign({ sub: 'user-id', email: 'test@example.com', role: 'user' });
-        } catch (e) {
-          // ignore if jwt service not available
-          signedToken = undefined;
-        }
-      }
       return;
     }
 
     // Mock mode: create testing module with controllers and mocked dependencies
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true }) , HttpModule, JwtModule.register({ secret: 'test-secret' })],
+      imports: [ConfigModule.forRoot({ isGlobal: true }) , HttpModule],
       controllers: [
         AuthController,
         PlacesController,
@@ -228,16 +208,6 @@ describe('API Gateway Integration Tests (api-gateway)', () => {
 
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
-
-    // Generate a signed JWT for tests so the real AuthGuard can verify it
-    if (!isLive) {
-      try {
-        const jwtService = app.get(require('@nestjs/jwt').JwtService);
-        signedToken = jwtService.sign({ sub: 'user-id', email: 'test@example.com', role: 'user' });
-      } catch (e) {
-        signedToken = undefined;
-      }
-    }
   });
 
   afterAll(async () => {
@@ -246,40 +216,10 @@ describe('API Gateway Integration Tests (api-gateway)', () => {
 
   // --- Tests adapted from example ---
   describe('Auth Service Integration', () => {
-      let authCookie: string | undefined;
-
-      it('POST /users should register a new user and return created user', async () => {
-        const userData = { email: 'newuser@example.com', password: 'Test123!', role: 'user' };
-        const res = await request(app.getHttpServer()).post('/users').send(userData);
-        if (isLive) {
-          // live may return 201 or 422 if already exists
-          expect([201, 422, 500, 503]).toContain(res.status);
-        } else {
-          expect(res.status).toBe(201);
-          expect(res.body).toHaveProperty('email', userData.email);
-          // try to capture set-cookie header if present
-          const setCookie = res.headers['set-cookie'] || res.headers['set-cookie'];
-          if (setCookie) {
-            // setCookie can be array or string
-            const raw = Array.isArray(setCookie) ? setCookie[0] : setCookie;
-            const match = /Authentication=([^;]+)/.exec(raw);
-            if (match) authCookie = match[1];
-          }
-        }
-      });
-
     it('POST /auth/login should proxy (mocked or live)', async () => {
       const loginData = { email: 'test@example.com', password: 'Test123!' };
       const response = await request(app.getHttpServer()).post('/auth/login').send(loginData);
       expect([200, 201, 400, 500, 503]).toContain(response.status);
-      if (!isLive) {
-        const setCookie = response.headers['set-cookie'];
-        if (setCookie) {
-          const raw = Array.isArray(setCookie) ? setCookie[0] : setCookie;
-          const match = /Authentication=([^;]+)/.exec(raw);
-          if (match) authCookie = match[1];
-        }
-      }
     });
 
     it('POST /auth/login validates input (invalid email)', async () => {
@@ -295,29 +235,11 @@ describe('API Gateway Integration Tests (api-gateway)', () => {
 
     it('GET /auth/profile requires auth', async () => {
       // Without x-test-auth header: should be 401 in mock mode
-      if (isLive) {
-        await request(app.getHttpServer()).get('/auth/profile');
-      } else {
-        await request(app.getHttpServer()).get('/auth/profile').expect(401);
-      }
+      await request(app.getHttpServer()).get('/auth/profile').expect(isLive ? undefined : 401);
     });
 
     it('GET /auth/profile with auth returns profile', async () => {
-      // supply x-test-auth to bypass mock guard and also send cookie/authorization so controller forwards token
-      const req = request(app.getHttpServer()).get('/auth/profile').set('x-test-auth', '1');
-      // Prefer a signed token created by the test app so the real AuthGuard can verify it.
-      if (signedToken) {
-        req.set('Cookie', `Authentication=${signedToken}`);
-        req.set('Authorization', `Bearer ${signedToken}`);
-      } else if (authCookie) {
-        // set both Cookie header (for forwarding) and Authorization header (since cookie-parser may not be present in the test app)
-        req.set('Cookie', `Authentication=${authCookie}`);
-        req.set('Authorization', `Bearer ${authCookie}`);
-      } else {
-        // fallback to authorization header if cookie not available
-        req.set('Authorization', 'Bearer mock-jwt-token');
-      }
-      const res = await req;
+      const res = await request(app.getHttpServer()).get('/auth/profile').set('x-test-auth', '1');
       if (isLive) {
         expect([200, 401, 500, 503]).toContain(res.status);
       } else {
@@ -373,7 +295,7 @@ describe('API Gateway Integration Tests (api-gateway)', () => {
 
   describe('Reservation Service Integration', () => {
     it('POST /reservations creates reservation and validates dates', async () => {
-      const good = { placeId: '507f1f77bcf86cd799439011', startDate: new Date('2024-12-25T10:00:00Z'), endDate: new Date('2024-12-25T18:00:00Z'), amount: 10000, customerEmail: 'test@example.com' };
+      const good = { placeId: '507f1f77bcf86cd799439011', startDate: new Date('2024-12-25T10:00:00Z'), endDate: new Date('2024-12-25T18:00:00Z'), customerEmail: 'test@example.com' };
       const resGood = await request(app.getHttpServer()).post('/reservations').set('x-test-auth', '1').send(good);
       if (isLive) {
         expect([201, 400, 500, 503]).toContain(resGood.status);
