@@ -14,7 +14,7 @@ export class ReservationController {
   @Post()
   @ApiOperation({ 
     summary: 'Crear reservación pendiente desde un lugar',
-    description: 'Crea una nueva reservación en estado PENDING a partir de un ID de lugar válido. El userId y customerEmail se extraen automáticamente de la cookie de autenticación (Available to all authenticated users)'
+    description: 'Crea una nueva reservación en estado PENDING a partir de un ID de lugar válido. El userId se extrae automáticamente de la cookie de autenticación y el customerEmail se extrae de la cookie o se puede proporcionar en el body (Available to all authenticated users)'
   })
   @ApiBody({ type: CreateReservationDto })
   @ApiResponse({ 

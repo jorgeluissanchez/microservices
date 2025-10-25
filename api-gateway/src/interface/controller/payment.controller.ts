@@ -6,7 +6,8 @@ import {
   ApiResponse, 
   ApiBody, 
   ApiParam,
-  ApiSecurity
+  ApiSecurity,
+  ApiExcludeEndpoint
 } from '@nestjs/swagger';
 import { 
   CreatePaymentDto, 
@@ -76,36 +77,7 @@ export class PaymentController {
   }
 
   @Post('webhook')
-  @ApiOperation({ 
-    summary: 'Webhook de Stripe para confirmar pagos',
-    description: 'Endpoint para recibir notificaciones de Stripe sobre el estado de los pagos'
-  })
-  @ApiBody({
-    description: 'Evento de Stripe',
-    schema: {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          example: 'payment_intent.succeeded'
-        },
-        data: {
-          type: 'object',
-          properties: {
-            object: {
-              type: 'object',
-              description: 'Objeto PaymentIntent de Stripe'
-            }
-          }
-        }
-      }
-    }
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Webhook procesado exitosamente'
-  })
-  @ApiResponse({ status: 400, description: 'Evento de Stripe inválido' })
+  @ApiExcludeEndpoint()
   async handleStripeWebhook(@Body() event: any, @Req() req: Request, @Res() res: Response) {
     console.log('API Gateway: Handling Stripe webhook:', event);
     const url = `${process.env.PAYMENT_SERVICE_URL}/payments/webhook`;

@@ -40,14 +40,6 @@ export class CreateReservationDto {
   @IsOptional()
   currency?: string = 'usd';
 
-  @ApiProperty({
-    description: 'ID del usuario (se extrae automáticamente de la cookie de autenticación)',
-    example: '60d5f484f8d2e7001f5e7b3a',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  userId?: string;
 
   @ApiProperty({
     description: 'Email del cliente (se extrae automáticamente de la cookie de autenticación)',
