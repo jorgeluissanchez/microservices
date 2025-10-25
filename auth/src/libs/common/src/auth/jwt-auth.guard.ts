@@ -20,7 +20,11 @@ export class JwtAuthGuard implements CanActivate {
     const jwt =
       context.switchToHttp().getRequest().cookies?.Authentication ||
       context.switchToHttp().getRequest()?.Authentication ||
-      context.switchToHttp().getRequest().headers?.Authentication;
+      context.switchToHttp().getRequest().headers?.Authentication ||
+      context.switchToHttp().getRequest().headers?.authentication || // <-- minúscula
+      context.switchToHttp().getRequest().headers?.authorization?.split(' ')[1] || // <-- formato Bearer
+      context.switchToHttp().getRequest().Authentication || // fallback
+      context.switchToHttp().getRequest().headers?.['x-test-auth']; // <-- para testes
       console.log('jwt', jwt);
 
     if (!jwt) {
