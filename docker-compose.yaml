@@ -114,7 +114,7 @@ services:
       - PORT=3002
       - MONGODB_URI=mongodb://admin:password123@mongodb:27017/payments_db?authSource=admin
       - STRIPE_SECRET_KEY=
-      - FRONTEND_URL=http://localhost:3000
+      - FRONTEND_URL=http://localhost:3005
       - RESERVATION_SERVICE_URL=http://reservations-service:3003
       - NODE_ENV=production
     depends_on:
