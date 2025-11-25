@@ -147,8 +147,23 @@ services:
     networks:
       - microservices-network
 
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: microservices-frontend
+    restart: unless-stopped
+    ports:
+      - "3005:3000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - microservices-network
+
 volumes:
   mongodb_data:
+
 
 networks:
   microservices-network:
