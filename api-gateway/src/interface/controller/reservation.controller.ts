@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Body, Param, Req, Res } from '@nestjs/common';
+import { Controller, Post, Patch, Body, Param, Req, Res, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiSecurity } from '@nestjs/swagger';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
@@ -9,16 +9,16 @@ import { CurrentUser } from '../../decorators/current-user.decorator';
 @ApiTags('reservations')
 @Controller('reservations')
 export class ReservationController {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly httpService: HttpService) { }
 
   @Post()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Crear reservación pendiente desde un lugar',
     description: 'Crea una nueva reservación en estado PENDING a partir de un ID de lugar válido. El userId se extrae automáticamente de la cookie de autenticación y el customerEmail se extrae de la cookie o se puede proporcionar en el body (Available to all authenticated users)'
   })
   @ApiBody({ type: CreateReservationDto })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Reservación creada exitosamente',
     type: ReservationResponseDto
   })
@@ -28,23 +28,23 @@ export class ReservationController {
   async createReservationFromPlace(@Body() createReservationDto: CreateReservationDto, @CurrentUser() user: any, @Req() req: Request, @Res() res: Response) {
     console.log('API Gateway: Received reservation request:', createReservationDto);
     console.log('API Gateway: User from cookie:', user);
-    
+
     // Extraer información del usuario de la cookie de autenticación
     const userId = user?.userId || user?.id;
     const customerEmail = user?.email || createReservationDto.customerEmail;
-    
+
     // Preparar datos para el servicio de reservaciones (sin userId en el body)
     const reservationData = {
       ...createReservationDto,
       customerEmail: customerEmail,
     };
-    
+
     console.log('API Gateway: Reservation data for service:', reservationData);
     console.log('API Gateway: User ID (will be passed separately):', userId);
-    
+
     const url = `${process.env.RESERVATION_SERVICE_URL}/reservations`;
     console.log('API Gateway: Creating reservation, URL:', url);
-    
+
     try {
       console.log('API Gateway: Making request to reservation service...');
       const response = await fetch(url, {
@@ -55,11 +55,11 @@ export class ReservationController {
         },
         body: JSON.stringify(reservationData),
       });
-      
+
       console.log('API Gateway: Response status:', response.status);
       const data = await response.json();
       console.log('API Gateway: Response data:', data);
-      
+
       res.status(response.status).json(data);
     } catch (error) {
       console.error('API Gateway: Error creating reservation:', error);
@@ -67,8 +67,43 @@ export class ReservationController {
     }
   }
 
+  @Get('user/me')
+  @ApiOperation({
+    summary: 'Obtener reservaciones del usuario autenticado',
+    description: 'Obtiene todas las reservaciones del usuario actualmente autenticado'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de reservaciones del usuario',
+    type: [ReservationResponseDto]
+  })
+  @ApiSecurity('bearer')
+  async getUserReservations(@CurrentUser() user: any, @Req() req: Request, @Res() res: Response) {
+    console.log('API Gateway: Fetching user reservations for user:', user?.userId || user?.id);
+
+    const userId = user?.userId || user?.id;
+    const url = `${process.env.RESERVATION_SERVICE_URL}/reservations/user/me`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': userId,
+        },
+      });
+
+      const data = await response.json();
+      console.log('API Gateway: User reservations response:', data);
+      res.status(response.status).json(data);
+    } catch (error) {
+      console.error('API Gateway: Error fetching user reservations:', error);
+      res.status(500).json({ message: 'Reservation service error', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+
   @Patch(':id/status')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Cambiar estado de reservación',
     description: 'Cambia el estado de una reservación existente. Estados disponibles: PENDING, CONFIRMED, CANCELLED, REJECTED (Available to all authenticated users)'
   })
@@ -98,7 +133,7 @@ export class ReservationController {
         },
         body: JSON.stringify(changeStatusDto),
       });
-      
+
       const data = await response.json();
       res.status(response.status).json(data);
     } catch (error) {
