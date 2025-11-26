@@ -38,8 +38,14 @@ export default function PlaceDetails() {
         // Fetch user reservations
         api.get('/reservations/user/me')
             .then(res => {
-                // Check if user has a reservation for this place
-                const reservation = res.data.find((r: any) => r.placeId === id && r.status === 'CONFIRMED');
+                console.log('All user reservations:', res.data);
+                console.log('Current place ID:', id);
+                // Check if user has a reservation for this place (convert to string for comparison)
+                const reservation = res.data.find((r: any) => {
+                    console.log('Comparing reservation placeId:', r.placeId, 'with place ID:', id, 'Status:', r.status);
+                    return String(r.placeId) === String(id) && r.status === 'CONFIRMED';
+                });
+                console.log('Found reservation:', reservation);
                 setUserReservation(reservation);
             })
             .catch(err => {
@@ -119,7 +125,10 @@ export default function PlaceDetails() {
                             <h3>✓ You have a reservation here</h3>
                             <p>Check-in: {new Date(userReservation.startDate).toLocaleDateString()}</p>
                             <p>Check-out: {new Date(userReservation.endDate).toLocaleDateString()}</p>
-                            <p>Status: <strong>{userReservation.status}</strong></p>
+                            <p>Reservation Status: <strong>{userReservation.status}</strong></p>
+                            {userReservation.paymentId && (
+                                <p>Payment: <strong style={{ color: '#047857' }}>✓ PAID</strong></p>
+                            )}
                         </div>
                     )}
                     {error && <div className={styles.error}>{error}</div>}

@@ -23,7 +23,10 @@ export default function Home() {
 
     // Fetch user reservations
     api.get('/reservations/user/me')
-      .then(res => setUserReservations(res.data))
+      .then(res => {
+        console.log('User reservations:', res.data);
+        setUserReservations(res.data);
+      })
       .catch(() => setUserReservations([]));
   }, []);
 
@@ -39,7 +42,7 @@ export default function Home() {
       <div className={styles.grid}>
         {places.map((place: any) => {
           const hasReservation = userReservations.some(
-            (r: any) => r.placeId === place._id && r.status === 'CONFIRMED'
+            (r: any) => String(r.placeId) === String(place._id) && r.status === 'CONFIRMED'
           );
           return <PlaceCard key={place._id} place={place} hasReservation={hasReservation} />;
         })}
