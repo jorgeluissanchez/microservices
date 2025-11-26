@@ -39,6 +39,9 @@ export default function Navbar() {
                                     Add Place
                                 </Link>
                             )}
+                            <Link href="/account" className={styles.accountLink}>
+                                Account
+                            </Link>
                             <button onClick={handleLogout} className={styles.link} style={{ cursor: 'pointer' }}>
                                 Logout
                             </button>

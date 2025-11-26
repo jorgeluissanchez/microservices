@@ -1,0 +1,181 @@
+.wrapper {
+    max-width: 100%;
+    margin: 0;
+    padding: 4rem 2rem;
+    background: #0a0a0a;
+    min-height: calc(100vh - 60px);
+    /* Subtract navbar height approx */
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.title {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    font-weight: 700;
+    background: linear-gradient(45deg, #fff, #888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.error {
+    background: rgba(176, 0, 32, 0.1);
+    border: 1px solid #b00020;
+    color: #ff8080;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.success {
+    background: rgba(0, 200, 83, 0.1);
+    border: 1px solid #00c853;
+    color: #69f0ae;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.card {
+    background: #161616;
+    border: 1px solid #333;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #222;
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.label {
+    font-weight: 500;
+    color: #888;
+}
+
+.role {
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #333;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+.passwordSection {
+    background: #161616;
+    border: 1px solid #333;
+    padding: 2rem;
+    border-radius: 12px;
+}
+
+.passwordSection h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #fff;
+}
+
+.note {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 100%;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.formGroup label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #aaa;
+}
+
+.formGroup input {
+    padding: 0.75rem 1rem;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background: #0f0f0f;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formGroup input:focus {
+    outline: none;
+    border-color: #555;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.formGroup input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.submitBtn {
+    background: #fff;
+    color: #000;
+    padding: 0.85rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, background-color 0.2s;
+    align-self: flex-start;
+    margin-top: 1rem;
+}
+
+.submitBtn:hover {
+    background: #e0e0e0;
+}
+
+.submitBtn:active {
+    transform: scale(0.98);
+}
+
+.submitBtn:disabled {
+    background: #333;
+    color: #777;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.back {
+    margin-top: 3rem;
+}
+
+.back a {
+    color: #888;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.back a:hover {
+    color: #fff;
+}

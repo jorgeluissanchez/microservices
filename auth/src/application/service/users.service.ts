@@ -8,10 +8,11 @@ import {
 
 import { UserRepository } from '@/infrastructure/repository/user.repository';
 import { CreateUserDTO } from '@/application/dto/create-user.dto';
+import { UpdateUserDto } from '@/application/dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(private readonly userRepository: UserRepository) { }
 
   async create(createUserDto: CreateUserDTO) {
     await this.validateCreateUserDto(createUserDto);
@@ -20,6 +21,17 @@ export class UsersService {
       password: await bcryptjs.hash(createUserDto.password, 10),
       role: createUserDto.role || 'user', // Default to 'user' if not specified
     });
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    console.log('UsersService: Updating user', id, updateUserDto);
+    const updates: any = { ...updateUserDto };
+    if (updates.password) {
+      updates.password = await bcryptjs.hash(updates.password, 10);
+    }
+    const result = await this.userRepository.findOneAndUpdate({ _id: id }, updates);
+    console.log('UsersService: Update result', result);
+    return result;
   }
 
   private async validateCreateUserDto(createUserDto: CreateUserDTO) {

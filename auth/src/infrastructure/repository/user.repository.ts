@@ -22,6 +22,10 @@ export class UserRepository {
     return this.userModel.findOne(filter).exec();
   }
 
+  async findOneAndUpdate(filter: any, update: any) {
+    return this.userModel.findOneAndUpdate(filter, update, { new: true }).exec();
+  }
+
   async findById(id: string) {
     return this.userModel.findById(id).exec();
   }
