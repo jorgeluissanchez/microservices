@@ -28,6 +28,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate({ userId, role }: Tokenpayload): Promise<any> {
     const user = await this.userService.getUserById(userId);
-    return { ...user, role };
+    if (!user) {
+      return null;
+    }
+    // Return the plain object with the role from the token
+    return { ...user.toObject(), role };
   }
 }
