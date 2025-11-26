@@ -18,6 +18,21 @@
     width: 100%;
     height: 200px;
     overflow: hidden;
+    position: relative;
+}
+
+.reservationBadge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background-color: #10b981;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .image {

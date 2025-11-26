@@ -16,6 +16,7 @@ export default function PlaceDetails() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [error, setError] = useState('');
+    const [userReservation, setUserReservation] = useState<any>(null);
 
     useEffect(() => {
         // Fetch place details
@@ -33,6 +34,17 @@ export default function PlaceDetails() {
         api.get('/auth/profile')
             .then(res => setUser(res.data))
             .catch(() => setUser(null));
+
+        // Fetch user reservations
+        api.get('/reservations/user/me')
+            .then(res => {
+                // Check if user has a reservation for this place
+                const reservation = res.data.find((r: any) => r.placeId === id && r.status === 'CONFIRMED');
+                setUserReservation(reservation);
+            })
+            .catch(err => {
+                console.log('Could not fetch reservations:', err);
+            });
     }, [id]);
 
     const handleReservation = async (e: React.FormEvent) => {
@@ -67,6 +79,7 @@ export default function PlaceDetails() {
 
             // Redirect to Stripe payment URL
             if (res.data.paymentUrl) {
+                sessionStorage.setItem('lastReservationPlaceId', place._id);
                 window.location.href = res.data.paymentUrl;
             }
         } catch (err: any) {
@@ -101,6 +114,14 @@ export default function PlaceDetails() {
 
                 <div className={styles.reservationCard}>
                     <h2 className={styles.price}>${place.pricePerDay} <span className={styles.perNight}>/ night</span></h2>
+                    {userReservation && (
+                        <div className={styles.reservationNotice}>
+                            <h3>✓ You have a reservation here</h3>
+                            <p>Check-in: {new Date(userReservation.startDate).toLocaleDateString()}</p>
+                            <p>Check-out: {new Date(userReservation.endDate).toLocaleDateString()}</p>
+                            <p>Status: <strong>{userReservation.status}</strong></p>
+                        </div>
+                    )}
                     {error && <div className={styles.error}>{error}</div>}
                     <form onSubmit={handleReservation}>
                         <Input

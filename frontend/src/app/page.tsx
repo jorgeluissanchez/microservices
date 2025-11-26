@@ -8,6 +8,7 @@ import styles from './page.module.css';
 export default function Home() {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userReservations, setUserReservations] = useState([]);
 
   useEffect(() => {
     api.get('/places')
@@ -19,6 +20,11 @@ export default function Home() {
         console.error(err);
         setLoading(false);
       });
+
+    // Fetch user reservations
+    api.get('/reservations/user/me')
+      .then(res => setUserReservations(res.data))
+      .catch(() => setUserReservations([]));
   }, []);
 
   if (loading) return <div className={styles.loading}>Loading places...</div>;
@@ -31,9 +37,12 @@ export default function Home() {
       </header>
 
       <div className={styles.grid}>
-        {places.map((place: any) => (
-          <PlaceCard key={place._id} place={place} />
-        ))}
+        {places.map((place: any) => {
+          const hasReservation = userReservations.some(
+            (r: any) => r.placeId === place._id && r.status === 'CONFIRMED'
+          );
+          return <PlaceCard key={place._id} place={place} hasReservation={hasReservation} />;
+        })}
       </div>
     </div>
   );

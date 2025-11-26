@@ -6,7 +6,7 @@ import { CreateReservationDto } from '@/application/dto/create-reservation.dto';
 export class ReservationsService {
   constructor(
     private readonly reservationsRepository: ReservationsRepository,
-  ) {}
+  ) { }
 
   async createPendingReservation(createReservationDto: CreateReservationDto, userId: string) {
     // Crear reservación en estado PENDING
@@ -39,7 +39,7 @@ export class ReservationsService {
       if (response.ok) {
         const paymentData = await response.json();
         console.log('Payment URL generated successfully:', paymentData.paymentUrl);
-        
+
         // Devolver la reservación con la información de pago
         return {
           ...reservation.toObject(),
@@ -60,7 +60,7 @@ export class ReservationsService {
 
   async cancelReservation(id: string, userId: string) {
     const reservation = await this.reservationsRepository.findOne({ _id: id });
-    
+
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
@@ -88,7 +88,7 @@ export class ReservationsService {
 
   async confirmReservation(id: string, paymentId: string) {
     const reservation = await this.reservationsRepository.findOne({ _id: id });
-    
+
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
@@ -109,7 +109,7 @@ export class ReservationsService {
 
   async rejectReservation(id: string, reason: string) {
     const reservation = await this.reservationsRepository.findOne({ _id: id });
-    
+
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
@@ -124,9 +124,13 @@ export class ReservationsService {
     );
   }
 
+  async getUserReservations(userId: string) {
+    return this.reservationsRepository.findByUserId(userId);
+  }
+
   async findOne(id: string) {
     const reservation = await this.reservationsRepository.findOne({ _id: id });
-    
+
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }

@@ -4,6 +4,7 @@ import {
   Body,
   Param,
   Patch,
+  Get,
   HttpCode,
   HttpStatus,
   Req,
@@ -16,19 +17,19 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { ReservationsService } from '../../../application/service/reservations.service';
-import { 
-  CreateReservationDto, 
-  ChangeReservationStatusDto, 
-  ReservationResponseDto 
+import {
+  CreateReservationDto,
+  ChangeReservationStatusDto,
+  ReservationResponseDto
 } from '../../../application/dto/create-reservation.dto';
 
 @ApiTags('reservations')
 @Controller('reservations')
 export class ReservationsController {
-  constructor(private readonly reservationsService: ReservationsService) {}
+  constructor(private readonly reservationsService: ReservationsService) { }
 
   @Post()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Crear reservación pendiente desde un lugar',
     description: 'Crea una nueva reservación en estado PENDING a partir de un ID de lugar válido'
   })
@@ -47,7 +48,7 @@ export class ReservationsController {
     // Obtener userId del header personalizado enviado por el API Gateway
     const userId = req.headers['x-user-id'] || 'mock-user-id';
     console.log('Reservation Service: Received userId from header:', userId);
-    
+
     const reservation = await this.reservationsService.createPendingReservation(
       createReservationDto,
       userId,
@@ -55,8 +56,30 @@ export class ReservationsController {
     return this.mapToResponseDto(reservation);
   }
 
+  @Get('user/me')
+  @ApiOperation({
+    summary: 'Obtener reservaciones del usuario',
+    description: 'Obtiene todas las reservaciones del usuario autenticado'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de reservaciones del usuario',
+    type: [ReservationResponseDto],
+  })
+  async getUserReservations(@Req() req: any): Promise<ReservationResponseDto[]> {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      // Fallback for local testing if gateway doesn't pass header
+      // In production this should probably throw Unauthorized
+      console.warn('No user ID found in headers');
+      return [];
+    }
+    const reservations = await this.reservationsService.getUserReservations(userId);
+    return reservations.map(r => this.mapToResponseDto(r));
+  }
+
   @Patch(':id/status')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Cambiar estado de reservación',
     description: 'Cambia el estado de una reservación existente. Estados disponibles: PENDING, CONFIRMED, CANCELLED, REJECTED'
   })
@@ -74,7 +97,7 @@ export class ReservationsController {
     @Body() changeStatusDto: ChangeReservationStatusDto,
   ): Promise<ReservationResponseDto> {
     const { status, reason } = changeStatusDto;
-    
+
     let reservation;
     switch (status) {
       case 'CONFIRMED':
@@ -89,7 +112,7 @@ export class ReservationsController {
       default:
         throw new Error('Invalid status');
     }
-    
+
     return this.mapToResponseDto(reservation);
   }
 
